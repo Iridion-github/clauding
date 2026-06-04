@@ -289,10 +289,11 @@ function TargetPicker({ type, card, players, playerOrder, playerId, onSelect }) 
                   key={pid}
                   className="fhtarget-btn"
                   onClick={() => onSelect(pid)}
+                  disabled={done}
                   style={{
-                    borderColor: theme.border,
-                    background: isSelf ? 'transparent' : theme.border + 'cc',
-                    color: theme.accent,
+                    borderColor: done ? '#555' : theme.border,
+                    background: done ? '#2a2a2a' : isSelf ? 'transparent' : theme.border + 'cc',
+                    color: done ? '#666' : theme.accent,
                   }}
                 >
                   {theme.icon}

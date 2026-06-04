@@ -175,10 +175,10 @@ function resolveFreeze(state, drawerId, targetId) {
   const pa = state.pendingAction;
   if (!pa || pa.type !== 'freeze' || pa.drawerId !== drawerId) return false;
   const target = state.players[targetId];
-  if (!target) return false;
+  if (!target || target.status !== 'active') return false;
 
   target.cards.push(pa.card);
-  if (target.status === 'active') target.status = 'stayed';
+  target.status = 'stayed';
 
   const who = drawerId === targetId ? 'themselves' : target.name;
   log(state, `${state.players[drawerId].name} froze ${who}.`);
@@ -193,7 +193,7 @@ function resolveFlipThree(state, drawerId, targetId) {
   const pa = state.pendingAction;
   if (!pa || pa.type !== 'flip_three' || pa.drawerId !== drawerId) return false;
   const target = state.players[targetId];
-  if (!target) return false;
+  if (!target || target.status !== 'active') return false;
 
   target.cards.push(pa.card);
   state.pendingAction = null;
@@ -201,9 +201,7 @@ function resolveFlipThree(state, drawerId, targetId) {
   const who = drawerId === targetId ? 'themselves' : target.name;
   log(state, `${state.players[drawerId].name} played Flip Three on ${who} — 3 forced cards!`);
 
-  if (target.status === 'active') {
-    drawN(state, targetId, 3, { auto: true });
-  }
+  drawN(state, targetId, 3, { auto: true });
 
   return true;
 }

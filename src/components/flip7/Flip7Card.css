@@ -1,0 +1,176 @@
+/* ── Base card ─────────────────────────────────────────────────────────────── */
+.f7card {
+  width: 140px;
+  height: 200px;
+  border-radius: 14px;
+  border: 2px solid rgba(255,255,255,0.22);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  user-select: none;
+  cursor: default;
+  transition: transform 0.15s, box-shadow 0.15s;
+  font-family: 'Georgia', serif;
+}
+
+.f7card:hover { transform: translateY(-5px); }
+
+.f7card.f7card-highlight {
+  outline: 3px solid #f0c040;
+  outline-offset: 2px;
+  box-shadow: 0 0 18px rgba(240,192,64,0.55) !important;
+}
+
+/* ── Small variant (opponent cards) ────────────────────────────────────────── */
+.f7card-small {
+  width: 72px;
+  height: 104px;
+  border-radius: 9px;
+  border-width: 1px;
+}
+.f7card-small:hover { transform: translateY(-3px); }
+
+/* ── Face-down back ─────────────────────────────────────────────────────────── */
+.f7card-back {
+  background: #1a1a2e;
+  border: 2px solid #3a3a6a;
+}
+.f7card-back-pattern {
+  width: 100%;
+  height: 100%;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      #2a2a5a 0px, #2a2a5a 3px,
+      #1a1a3a 3px, #1a1a3a 9px
+    );
+  border-radius: 12px;
+  opacity: 0.85;
+}
+
+/* ── Inner decorative frame ─────────────────────────────────────────────────── */
+.f7card::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+  pointer-events: none;
+}
+.f7card-small::after { inset: 3px; border-radius: 6px; }
+
+/* ── Pip sections (top and bottom bands) ────────────────────────────────────── */
+.f7card-pip {
+  display: flex;
+  flex-direction: column;
+  padding: 7px 9px;
+  line-height: 1;
+  background: rgba(0,0,0,0.18);
+  flex-shrink: 0;
+}
+.f7card-pip-br { align-items: flex-end; margin-top: auto; transform: rotate(180deg); }
+
+.f7card-pip-val {
+  font-size: 17px;
+  font-weight: bold;
+  letter-spacing: -1px;
+}
+.f7card-pip-sym {
+  font-size: 11px;
+  opacity: 0.75;
+  margin-top: 1px;
+}
+
+.f7card-small .f7card-pip      { padding: 4px 5px; }
+.f7card-small .f7card-pip-val  { font-size: 11px; }
+.f7card-small .f7card-pip-sym  { font-size: 8px; }
+
+/* ── Center content ─────────────────────────────────────────────────────────── */
+.f7card-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 6px;
+  position: relative;
+}
+
+.f7card-icon {
+  font-size: 26px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+}
+.f7card-small .f7card-icon { font-size: 16px; }
+
+.f7card-main-value {
+  font-size: 52px;
+  font-weight: bold;
+  line-height: 1;
+  letter-spacing: -2px;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.35);
+}
+.f7card-small .f7card-main-value { font-size: 26px; letter-spacing: -1px; }
+
+.f7card-sub {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  opacity: 0.65;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.f7card-small .f7card-sub { display: none; }
+
+.f7card-label {
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  text-align: center;
+  line-height: 1.2;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  white-space: nowrap;
+}
+.f7card-small .f7card-label { font-size: 7px; letter-spacing: 0; }
+
+/* ── Risk bar (number cards only) ───────────────────────────────────────────── */
+.f7card-risk-bar-wrap {
+  width: 80%;
+  height: 5px;
+  background: rgba(0,0,0,0.25);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+.f7card-risk-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+.f7card-small .f7card-risk-bar-wrap { display: none; }
+
+/* ── Deck count badge ───────────────────────────────────────────────────────── */
+.f7card-deck-count {
+  font-size: 8px;
+  opacity: 0.55;
+  letter-spacing: 0.5px;
+}
+.f7card-small .f7card-deck-count { display: none; }
+
+/* ── Watermark diamond ──────────────────────────────────────────────────────── */
+.f7card-watermark {
+  position: absolute;
+  font-size: 80px;
+  opacity: 0.05;
+  pointer-events: none;
+  line-height: 1;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+.f7card-small .f7card-watermark { display: none; }

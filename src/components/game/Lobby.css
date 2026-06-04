@@ -1,0 +1,130 @@
+.lobby {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #1a2a1a;
+  color: #eee;
+  gap: 16px;
+  padding: 24px;
+  position: relative;
+}
+
+.lobby-back {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  background: none;
+  border: 1px solid #444;
+  color: #aaa;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: border-color 0.15s, color 0.15s;
+}
+.lobby-back:hover { border-color: #f0c040; color: #f0c040; }
+
+.lobby h1 {
+  font-size: 36px;
+  color: #f0c040;
+  margin: 0;
+  text-shadow: 0 2px 10px rgba(240,192,64,0.4);
+}
+
+.lobby-status {
+  font-size: 13px;
+  color: #40c070;
+  margin: 0;
+}
+
+.lobby-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 320px;
+}
+
+.lobby-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: #aaa;
+}
+
+.lobby-form input {
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background: #2a3a2a;
+  color: #eee;
+  font-size: 14px;
+}
+
+.lobby-form button[type="submit"] {
+  padding: 10px;
+  background: #2d6a4f;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.lobby-form button[type="submit"]:hover:not(:disabled) {
+  background: #40c070;
+  color: #001a00;
+}
+
+.lobby-form button[type="submit"]:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.deck-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.deck-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 2px solid #444;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #2a3a2a;
+  transition: border-color 0.15s;
+}
+
+.deck-option:hover { border-color: #888; }
+
+.deck-option.selected {
+  border-color: #f0c040;
+  background: #3a4a2a;
+}
+
+.deck-option strong { font-size: 14px; color: #eee; }
+.deck-option span   { font-size: 12px; color: #999; }
+
+.lobby-waiting {
+  text-align: center;
+  color: #aaa;
+}
+
+.lobby-hint {
+  color: #f0c040;
+  font-style: italic;
+}
+
+.lobby-error {
+  color: #ff8080;
+  font-size: 13px;
+  margin: 0;
+}

@@ -1,0 +1,97 @@
+.card {
+  width: 120px;
+  min-height: 170px;
+  border: 2px solid #555;
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  position: relative;
+  transition: transform 0.15s, box-shadow 0.15s;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+}
+
+.card.selected {
+  border-color: #f0c040;
+  box-shadow: 0 0 12px #f0c040;
+  transform: translateY(-10px);
+}
+
+.card.playable {
+  border-color: #40c070;
+}
+
+.card.tapped {
+  transform: rotate(15deg);
+  margin-right: 20px;
+}
+
+.card.tapped:hover {
+  transform: rotate(15deg) translateY(-6px);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  font-size: 10px;
+}
+
+.card-name {
+  flex: 1;
+}
+
+.card-cost {
+  color: #888;
+  white-space: nowrap;
+}
+
+.card-type {
+  font-size: 9px;
+  color: #666;
+  border-top: 1px solid #ccc;
+  padding-top: 2px;
+  text-transform: capitalize;
+}
+
+.card-text {
+  font-size: 9px;
+  flex: 1;
+  font-style: italic;
+}
+
+.card-pt {
+  font-weight: bold;
+  text-align: right;
+  font-size: 11px;
+  border-top: 1px solid #ccc;
+  padding-top: 2px;
+}
+
+.card-damage {
+  color: #c00;
+  font-size: 9px;
+}
+
+.card-tapped-label,
+.card-sick-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 9px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  pointer-events: none;
+}

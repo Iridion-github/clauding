@@ -2,13 +2,13 @@ import { useEffect, useRef } from 'react';
 import { Button, Chip, Stack, Typography, Box } from '@mui/material';
 import AcUnitIcon from '@mui/icons-material/AcUnit';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
-import { Flip7Card } from './Flip7Card';
-import './Flip7Board.css';
+import { FlippingHusksCard } from './FlippingHusksCard';
+import './FlippingHusksBoard.css';
 
-const STATUS_COLOR = { active: 'default', stayed: 'success', busted: 'error', flip7: 'primary' };
-const STATUS_LABEL = { active: 'Playing', stayed: 'Stayed', busted: 'Bust!', flip7: 'Flip 7!' };
+const STATUS_COLOR = { active: 'default', stayed: 'success', busted: 'error', flippinghusks: 'primary' };
+const STATUS_LABEL = { active: 'Playing', stayed: 'Stayed', busted: 'Bust!', flippinghusks: 'Flipping Husks!' };
 
-export function Flip7Board({ gameState, playerId, isMyTurn, actionError, sendAction }) {
+export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError, sendAction }) {
   const { players, playerOrder, activePlayerId, phase, round, drawPile, log, winner, pendingAction } = gameState;
   const self = players[playerId];
   const opponents = playerOrder.filter(pid => pid !== playerId);
@@ -21,26 +21,26 @@ export function Flip7Board({ gameState, playerId, isMyTurn, actionError, sendAct
   }, [log]);
 
   function calcDisplay(player) {
-    if (player.status === 'busted') return { score: 0, uniq: 0, f7: false };
+    if (player.status === 'busted') return { score: 0, uniq: 0, fh: false };
     const nums    = player.cards.filter(c => c.type === 'number');
     const numSum  = nums.reduce((s, c) => s + c.value, 0);
     const hasMult = player.cards.some(c => c.type === 'multiplier');
     const modSum  = player.cards.filter(c => c.type === 'modifier').reduce((s, c) => s + c.value, 0);
     const uniq    = new Set(nums.map(c => c.value)).size;
-    const f7      = uniq >= 7;
-    return { score: (hasMult ? numSum * 2 : numSum) + modSum + (f7 ? 15 : 0), uniq, f7 };
+    const fh      = uniq >= 7;
+    return { score: (hasMult ? numSum * 2 : numSum) + modSum + (fh ? 15 : 0), uniq, fh };
   }
 
   return (
-    <div className="f7board">
+    <div className="fhboard">
 
       {/* ── Main column ─────────────────────────────────────────────────── */}
-      <div className="f7board-main">
+      <div className="fhboard-main">
 
         {/* Header */}
-        <div className="f7board-header">
+        <div className="fhboard-header">
           <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-            <Typography variant="h6" color="primary" fontWeight="bold">Flip 7</Typography>
+            <Typography variant="h6" color="primary" fontWeight="bold">Flipping Husks</Typography>
             <Chip label={`Round ${round}`} size="small" variant="outlined" />
             <Chip label={`Deck: ${drawPile.length}`} size="small" variant="outlined" />
             {phase === 'round_end' && <Chip label="Round over" color="warning" size="small" />}
@@ -50,13 +50,13 @@ export function Flip7Board({ gameState, playerId, isMyTurn, actionError, sendAct
 
         {/* Opponents */}
         {opponents.length > 0 && (
-          <div className="f7board-opponents">
+          <div className="fhboard-opponents">
             {opponents.map(pid => {
               const p = players[pid];
               const isActive = pid === activePlayerId && phase === 'playing';
               const { score, uniq } = calcDisplay(p);
               return (
-                <div key={pid} className={`f7opponent${isActive ? ' active' : ''}`}>
+                <div key={pid} className={`fhopponent${isActive ? ' active' : ''}`}>
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
                     <Typography variant="body2" fontWeight="bold">{p.name}</Typography>
                     <Chip label={STATUS_LABEL[p.status]} color={STATUS_COLOR[p.status]} size="small" />
@@ -65,8 +65,8 @@ export function Flip7Board({ gameState, playerId, isMyTurn, actionError, sendAct
                       {p.totalScore} pts
                     </Typography>
                   </Stack>
-                  <div className="f7opponent-cards">
-                    {p.cards.map(card => <Flip7Card key={card.id} card={card} small />)}
+                  <div className="fhopponent-cards">
+                    {p.cards.map(card => <FlippingHusksCard key={card.id} card={card} small />)}
                     {p.cards.length === 0 && (
                       <Typography variant="caption" color="text.secondary" fontStyle="italic">No cards</Typography>
                     )}
@@ -82,9 +82,9 @@ export function Flip7Board({ gameState, playerId, isMyTurn, actionError, sendAct
         )}
 
         {/* My area */}
-        <div className="f7board-me-wrap">
-          <div className="f7board-me">
-            <div className="f7board-me-header">
+        <div className="fhboard-me-wrap">
+          <div className="fhboard-me">
+            <div className="fhboard-me-header">
               <Typography variant="body1" fontWeight="bold" color="secondary.main">
                 {self?.name} (you)
               </Typography>
@@ -95,13 +95,13 @@ export function Flip7Board({ gameState, playerId, isMyTurn, actionError, sendAct
               <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
                 Total: <strong>{self?.totalScore ?? 0}</strong>
                 {self && (() => {
-                  const { score, uniq, f7 } = calcDisplay(self);
-                  return <span style={{ marginLeft: 8 }}>· ~{score} this round · {uniq}/7{f7 ? ' 🎉' : ''}{self.secondChances > 0 ? ` · ★×${self.secondChances}` : ''}</span>;
+                  const { score, uniq, fh } = calcDisplay(self);
+                  return <span style={{ marginLeft: 8 }}>· ~{score} this round · {uniq}/7{fh ? ' 🎉' : ''}{self.secondChances > 0 ? ` · ★×${self.secondChances}` : ''}</span>;
                 })()}
               </Typography>
             </div>
-            <div className="f7board-me-cards">
-              {self?.cards.map(card => <Flip7Card key={card.id} card={card} />)}
+            <div className="fhboard-me-cards">
+              {self?.cards.map(card => <FlippingHusksCard key={card.id} card={card} />)}
               {self?.cards.length === 0 && (
                 <Typography variant="caption" color="text.secondary" fontStyle="italic">
                   No cards yet this round
@@ -114,18 +114,18 @@ export function Flip7Board({ gameState, playerId, isMyTurn, actionError, sendAct
       </div>
 
       {/* ── Log sidebar ─────────────────────────────────────────────────── */}
-      <div className="f7board-log-sidebar">
-        <div className="f7board-log-title">Event Log</div>
-        <div className="f7board-log-entries" ref={logRef}>
+      <div className="fhboard-log-sidebar">
+        <div className="fhboard-log-title">Event Log</div>
+        <div className="fhboard-log-entries" ref={logRef}>
           {[...log].reverse().map((entry, i) => (
-            <div key={i} className="f7log-entry">{entry}</div>
+            <div key={i} className="fhlog-entry">{entry}</div>
           ))}
         </div>
       </div>
 
       {/* ── "Your turn" banner at top ────────────────────────────────────── */}
       {isMyTurn && phase === 'playing' && !myPendingIsOpen && (
-        <div className="f7turn-banner">⚡ Your Turn</div>
+        <div className="fhturn-banner">⚡ Your Turn</div>
       )}
 
       {/* ── Fixed action bar (bottom of main column) ─────────────────────── */}
@@ -170,7 +170,7 @@ export function Flip7Board({ gameState, playerId, isMyTurn, actionError, sendAct
 function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePlayerId, winner, sendAction }) {
   if (phase === 'round_end') {
     return (
-      <div className="f7action-bar">
+      <div className="fhaction-bar">
         <Scoreboard players={players} playerOrder={playerOrder} />
         <Button variant="contained" color="primary" size="large"
           onClick={() => sendAction({ type: 'NEXT_ROUND' })}>
@@ -182,7 +182,7 @@ function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePla
 
   if (phase === 'finished') {
     return (
-      <div className="f7action-bar">
+      <div className="fhaction-bar">
         <Scoreboard players={players} playerOrder={playerOrder} final />
       </div>
     );
@@ -190,8 +190,8 @@ function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePla
 
   if (!isMyTurn) {
     return (
-      <div className="f7action-bar">
-        <Typography className="f7action-status">
+      <div className="fhaction-bar">
+        <Typography className="fhaction-status">
           Waiting for {players[activePlayerId]?.name ?? '…'} to act…
         </Typography>
       </div>
@@ -200,23 +200,23 @@ function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePla
 
   // My turn
   return (
-    <div className="f7action-bar">
+    <div className="fhaction-bar">
       <button
-        className="f7action-btn f7action-btn-hit"
+        className="fhaction-btn fhaction-btn-hit"
         onClick={() => sendAction({ type: 'HIT' })}
       >
-        <span className="f7action-btn-icon">🃏</span>
-        <span className="f7action-btn-main">Hit</span>
-        <span className="f7action-btn-sub">Draw a card</span>
+        <span className="fhaction-btn-icon">🃏</span>
+        <span className="fhaction-btn-main">Hit</span>
+        <span className="fhaction-btn-sub">Draw a card</span>
       </button>
       <button
-        className="f7action-btn f7action-btn-stay"
+        className="fhaction-btn fhaction-btn-stay"
         disabled={self?.status !== 'active'}
         onClick={() => sendAction({ type: 'STAY' })}
       >
-        <span className="f7action-btn-icon">✋</span>
-        <span className="f7action-btn-main">Stay</span>
-        <span className="f7action-btn-sub">Bank your points</span>
+        <span className="fhaction-btn-icon">✋</span>
+        <span className="fhaction-btn-main">Stay</span>
+        <span className="fhaction-btn-sub">Bank your points</span>
       </button>
     </div>
   );
@@ -258,26 +258,26 @@ function TargetPicker({ type, card, players, playerOrder, playerId, onSelect }) 
 
   return (
     <div
-      className="f7target-picker"
+      className="fhtarget-picker"
       style={{ '--picker-border': theme.border, '--picker-glow': theme.glow }}
     >
-      <div className="f7target-picker-inner">
+      <div className="fhtarget-picker-inner">
 
         {/* Card + icon column */}
-        <div className="f7target-picker-card-col">
+        <div className="fhtarget-picker-card-col">
           <Typography sx={{ color: theme.accent, fontSize: 28, lineHeight: 1 }}>{theme.icon}</Typography>
-          {card && <Flip7Card card={card} />}
+          {card && <FlippingHusksCard card={card} />}
         </div>
 
         {/* Content column */}
-        <div className="f7target-picker-content">
-          <div className="f7target-picker-title" style={{ color: theme.accent }}>
+        <div className="fhtarget-picker-content">
+          <div className="fhtarget-picker-title" style={{ color: theme.accent }}>
             {theme.label}!
             <Typography variant="body2" color="text.secondary" sx={{ ml: 1, fontStyle: 'italic' }}>
               Choose a target
             </Typography>
           </div>
-          <p className="f7target-picker-hint">{theme.hint}</p>
+          <p className="fhtarget-picker-hint">{theme.hint}</p>
 
           <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
             {playerOrder.map(pid => {
@@ -287,7 +287,7 @@ function TargetPicker({ type, card, players, playerOrder, playerId, onSelect }) 
               return (
                 <button
                   key={pid}
-                  className="f7target-btn"
+                  className="fhtarget-btn"
                   onClick={() => onSelect(pid)}
                   style={{
                     borderColor: theme.border,
@@ -298,7 +298,7 @@ function TargetPicker({ type, card, players, playerOrder, playerId, onSelect }) 
                   {theme.icon}
                   {p.name}
                   {isSelf && ' (you)'}
-                  {done && <span className="f7target-btn-status"> {p.status === 'stayed' ? '✓stayed' : '✗bust'}</span>}
+                  {done && <span className="fhtarget-btn-status"> {p.status === 'stayed' ? '✓stayed' : '✗bust'}</span>}
                 </button>
               );
             })}
@@ -315,9 +315,9 @@ const TYPE_LABEL = { freeze: 'Freeze ❄', flip_three: 'Flip Three ↺' };
 
 function ObserverModal({ drawerName, type, card }) {
   return (
-    <div className="f7observer-modal">
-      <div className="f7observer-inner">
-        {card && <Flip7Card card={card} small />}
+    <div className="fhobserver-modal">
+      <div className="fhobserver-inner">
+        {card && <FlippingHusksCard card={card} small />}
         <Box>
           <Typography variant="body2" fontWeight="bold" color="warning.main">
             {drawerName} drew {TYPE_LABEL[type] ?? type}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Flip7Card } from './Flip7Card';
+import { FlippingHusksCard } from './FlippingHusksCard';
 import './CardDrawAnimation.css';
 
 // Phase timeline (ms):
@@ -13,11 +13,11 @@ import './CardDrawAnimation.css';
 //   sc-exit    4000 – 5000  both cards slide up               → done at 5000
 
 const MAIN_PHASE_CLASS = {
-  falling:   'f7anim-falling',
-  'flip-out':'f7anim-flip-out',
-  'flip-in': 'f7anim-flip-in',
-  revealed:  'f7anim-revealed',
-  busting:   'f7anim-busting',
+  falling:   'fhanim-falling',
+  'flip-out':'fhanim-flip-out',
+  'flip-in': 'fhanim-flip-in',
+  revealed:  'fhanim-revealed',
+  busting:   'fhanim-busting',
 };
 
 export function CardDrawAnimation({ card, isBust, secondChanceCard, onDone }) {
@@ -49,35 +49,35 @@ export function CardDrawAnimation({ card, isBust, secondChanceCard, onDone }) {
   const mainClass  = MAIN_PHASE_CLASS[phase];
 
   return (
-    <div className="f7anim-overlay">
-      {phase === 'busting' && <div className="f7anim-bust-flash" />}
+    <div className="fhanim-overlay">
+      {phase === 'busting' && <div className="fhanim-bust-flash" />}
 
       {/* Single-card phases */}
       {!inSCPhase && (
-        <div className={`f7anim-card-wrap ${mainClass ?? ''}`}>
+        <div className={`fhanim-card-wrap ${mainClass ?? ''}`}>
           <div style={{ pointerEvents: 'none' }}>
-            <Flip7Card card={card} faceDown={faceDown} />
+            <FlippingHusksCard card={card} faceDown={faceDown} />
           </div>
         </div>
       )}
 
       {/* Second-chance two-card display */}
       {inSCPhase && (
-        <div className={`f7anim-sc-wrap ${phase === 'sc-exit' ? 'f7anim-sc-exit' : 'f7anim-sc-show'}`}>
-          <div className="f7anim-sc-pair">
+        <div className={`fhanim-sc-wrap ${phase === 'sc-exit' ? 'fhanim-sc-exit' : 'fhanim-sc-show'}`}>
+          <div className="fhanim-sc-pair">
             <div style={{ pointerEvents: 'none' }}>
-              <Flip7Card card={card} />
+              <FlippingHusksCard card={card} />
             </div>
             {secondChanceCard && (
               <>
-                <div className="f7anim-sc-vs">★</div>
+                <div className="fhanim-sc-vs">★</div>
                 <div style={{ pointerEvents: 'none' }}>
-                  <Flip7Card card={secondChanceCard} />
+                  <FlippingHusksCard card={secondChanceCard} />
                 </div>
               </>
             )}
           </div>
-          <div className="f7anim-sc-label">SECOND CHANCE!</div>
+          <div className="fhanim-sc-label">SECOND CHANCE!</div>
         </div>
       )}
     </div>

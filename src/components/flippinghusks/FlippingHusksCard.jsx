@@ -1,4 +1,4 @@
-import './Flip7Card.css';
+import './FlippingHusksCard.css';
 
 // Number card styles: background gradient, text color, glow color, pip symbol
 const NUMBER_STYLES = [
@@ -28,13 +28,13 @@ const SPECIAL_STYLES = {
 const RISK_LABELS = ['SAFE','SAFE','LOW','LOW','LOW','MED','MED','HIGH','HIGH','HIGH','MAX','MAX','MAX'];
 const DECK_COUNTS = [1,1,2,3,4,5,6,7,8,9,10,11,12];
 
-export function Flip7Card({ card, faceDown = false, small = false, highlight = false }) {
+export function FlippingHusksCard({ card, faceDown = false, small = false, highlight = false }) {
   if (!card) return null;
 
   if (faceDown) {
     return (
-      <div className={`f7card f7card-back${small ? ' f7card-small' : ''}`}>
-        <div className="f7card-back-pattern" />
+      <div className={`fhcard fhcard-back${small ? ' fhcard-small' : ''}`}>
+        <div className="fhcard-back-pattern" />
       </div>
     );
   }
@@ -50,30 +50,30 @@ function NumberCard({ card, small, highlight }) {
 
   return (
     <div
-      className={`f7card${small ? ' f7card-small' : ''}${highlight ? ' f7card-highlight' : ''}`}
+      className={`fhcard${small ? ' fhcard-small' : ''}${highlight ? ' fhcard-highlight' : ''}`}
       style={{ background: s.bg, color: s.text, boxShadow: `0 6px 20px ${s.glow}66` }}
     >
-      <div className="f7card-pip f7card-pip-tl">
-        <div className="f7card-pip-val">{card.label}</div>
-        <div className="f7card-pip-sym">{s.sym}</div>
+      <div className="fhcard-pip fhcard-pip-tl">
+        <div className="fhcard-pip-val">{card.label}</div>
+        <div className="fhcard-pip-sym">{s.sym}</div>
       </div>
 
-      <div className="f7card-center">
-        <div className="f7card-watermark">◆</div>
-        <div className="f7card-main-value">{card.label}</div>
-        <div className="f7card-sub">{RISK_LABELS[card.value]} RISK</div>
-        <div className="f7card-risk-bar-wrap">
+      <div className="fhcard-center">
+        <div className="fhcard-watermark">◆</div>
+        <div className="fhcard-main-value">{card.label}</div>
+        <div className="fhcard-sub">{RISK_LABELS[card.value]} RISK</div>
+        <div className="fhcard-risk-bar-wrap">
           <div
-            className="f7card-risk-bar-fill"
+            className="fhcard-risk-bar-fill"
             style={{ width: `${riskPct}%`, background: s.riskColor }}
           />
         </div>
-        <div className="f7card-deck-count">×{count} in deck</div>
+        <div className="fhcard-deck-count">×{count} in deck</div>
       </div>
 
-      <div className="f7card-pip f7card-pip-br">
-        <div className="f7card-pip-val">{card.label}</div>
-        <div className="f7card-pip-sym">{s.sym}</div>
+      <div className="fhcard-pip fhcard-pip-br">
+        <div className="fhcard-pip-val">{card.label}</div>
+        <div className="fhcard-pip-sym">{s.sym}</div>
       </div>
     </div>
   );
@@ -87,26 +87,26 @@ function SpecialCard({ card, small, highlight }) {
 
   return (
     <div
-      className={`f7card${small ? ' f7card-small' : ''}${highlight ? ' f7card-highlight' : ''}`}
+      className={`fhcard${small ? ' fhcard-small' : ''}${highlight ? ' fhcard-highlight' : ''}`}
       style={{ background: s.bg, color: s.text, boxShadow: `0 6px 20px ${s.glow}66` }}
     >
-      <div className="f7card-pip f7card-pip-tl">
-        <div className="f7card-pip-val">{isModifier ? card.label : s.sym}</div>
-        <div className="f7card-pip-sym">{card.type === 'second_chance' ? 'SC' : card.type === 'flip_three' ? 'F3' : card.type.slice(0,2).toUpperCase()}</div>
+      <div className="fhcard-pip fhcard-pip-tl">
+        <div className="fhcard-pip-val">{isModifier ? card.label : s.sym}</div>
+        <div className="fhcard-pip-sym">{card.type === 'second_chance' ? 'SC' : card.type === 'flip_three' ? 'F3' : card.type.slice(0,2).toUpperCase()}</div>
       </div>
 
-      <div className="f7card-center">
-        <div className="f7card-watermark">{s.sym}</div>
-        {s.icon && <div className="f7card-icon">{isModifier ? null : s.icon}</div>}
-        <div className="f7card-main-value" style={{ fontSize: isModifier ? '44px' : '36px', letterSpacing: 0 }}>
+      <div className="fhcard-center">
+        <div className="fhcard-watermark">{s.sym}</div>
+        {s.icon && <div className="fhcard-icon">{isModifier ? null : s.icon}</div>}
+        <div className="fhcard-main-value" style={{ fontSize: isModifier ? '44px' : '36px', letterSpacing: 0 }}>
           {label}
         </div>
-        {sub && <div className="f7card-sub">{sub}</div>}
+        {sub && <div className="fhcard-sub">{sub}</div>}
       </div>
 
-      <div className="f7card-pip f7card-pip-br">
-        <div className="f7card-pip-val">{isModifier ? card.label : s.sym}</div>
-        <div className="f7card-pip-sym">{card.type === 'second_chance' ? 'SC' : card.type === 'flip_three' ? 'F3' : card.type.slice(0,2).toUpperCase()}</div>
+      <div className="fhcard-pip fhcard-pip-br">
+        <div className="fhcard-pip-val">{isModifier ? card.label : s.sym}</div>
+        <div className="fhcard-pip-sym">{card.type === 'second_chance' ? 'SC' : card.type === 'flip_three' ? 'F3' : card.type.slice(0,2).toUpperCase()}</div>
       </div>
     </div>
   );

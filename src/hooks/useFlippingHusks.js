@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 
 const SERVER_URL = process.env.NODE_ENV === 'production'
-  ? `${window.location.origin}/flip7`
-  : 'http://localhost:3001/flip7';
+  ? `${window.location.origin}/flippinghusks`
+  : 'http://localhost:3001/flippinghusks';
 
-export function useFlip7() {
+export function useFlippingHusks() {
   const socketRef = useRef(null);
   const [connected, setConnected]     = useState(false);
   const [playerId, setPlayerId]       = useState(null);
@@ -24,16 +24,16 @@ export function useFlip7() {
     socket.on('connect',    () => setConnected(true));
     socket.on('disconnect', () => setConnected(false));
 
-    socket.on('f7_joined', ({ playerId: pid, isHost: h }) => {
+    socket.on('fh_joined', ({ playerId: pid, isHost: h }) => {
       setPlayerId(pid);
       setIsHost(h);
     });
-    socket.on('f7_room_update', ({ players, hostId: hid }) => {
+    socket.on('fh_room_update', ({ players, hostId: hid }) => {
       setRoomPlayers(players);
       setHostId(hid);
     });
-    socket.on('f7_game_started',  ({ state }) => { setGameState(state); setError(null); });
-    socket.on('f7_state_update',  ({ state }) => {
+    socket.on('fh_game_started',  ({ state }) => { setGameState(state); setError(null); });
+    socket.on('fh_state_update',  ({ state }) => {
       setGameState(prev => {
         let drawn = null;
         if (state.secondChanceEvent) {
@@ -47,9 +47,9 @@ export function useFlip7() {
       });
       setActionError(null);
     });
-    socket.on('f7_action_rejected', ({ error: e }) => setActionError(e));
-    socket.on('f7_error',         ({ message }) => setError(message));
-    socket.on('f7_player_left',   ({ playerId: pid }) => {
+    socket.on('fh_action_rejected', ({ error: e }) => setActionError(e));
+    socket.on('fh_error',         ({ message }) => setError(message));
+    socket.on('fh_player_left',   ({ playerId: pid }) => {
       setRoomPlayers(prev => prev.filter(p => p.id !== pid));
     });
 
@@ -57,9 +57,9 @@ export function useFlip7() {
     return () => socket.disconnect();
   }, []);
 
-  const joinRoom  = useCallback((roomId, name) => socketRef.current?.emit('f7_join',   { roomId, playerName: name }), []);
-  const startGame = useCallback((roomId)        => socketRef.current?.emit('f7_start',  { roomId }), []);
-  const sendAction = useCallback((action)       => { setActionError(null); socketRef.current?.emit('f7_action', { action }); }, []);
+  const joinRoom  = useCallback((roomId, name) => socketRef.current?.emit('fh_join',   { roomId, playerName: name }), []);
+  const startGame = useCallback((roomId)        => socketRef.current?.emit('fh_start',  { roomId }), []);
+  const sendAction = useCallback((action)       => { setActionError(null); socketRef.current?.emit('fh_action', { action }); }, []);
   const clearDrawnCardAnim = useCallback(() => setDrawnCardAnim(null), []);
 
   const isMyTurn = gameState?.activePlayerId === playerId;

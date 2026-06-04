@@ -106,8 +106,8 @@ function applyCard(state, playerId, card, opts = {}) {
       player.cards.push(card);
       const uniqueNums = new Set(player.cards.filter(c => c.type === 'number').map(c => c.value));
       if (uniqueNums.size >= 7) {
-        player.status = 'flip7';
-        log(state, `${player.name} achieved Flip 7! Round ends for everyone!`);
+        player.status = 'flippinghusks';
+        log(state, `${player.name} achieved Flipping Husks! Round ends for everyone!`);
         endRound(state);
         return;
       }
@@ -229,8 +229,8 @@ function calcScore(player) {
   const numSum  = nums.reduce((s, c) => s + c.value, 0);
   const hasMult = player.cards.some(c => c.type === 'multiplier');
   const modSum  = player.cards.filter(c => c.type === 'modifier').reduce((s, c) => s + c.value, 0);
-  const f7Bonus = new Set(nums.map(c => c.value)).size >= 7 ? 15 : 0;
-  return (hasMult ? numSum * 2 : numSum) + modSum + f7Bonus;
+  const fhBonus = new Set(nums.map(c => c.value)).size >= 7 ? 15 : 0;
+  return (hasMult ? numSum * 2 : numSum) + modSum + fhBonus;
 }
 
 function endRound(state) {

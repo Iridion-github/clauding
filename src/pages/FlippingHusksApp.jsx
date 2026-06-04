@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { useFlip7 } from '../hooks/useFlip7';
-import { Flip7Lobby } from '../components/flip7/Flip7Lobby';
-import { Flip7Board } from '../components/flip7/Flip7Board';
-import { CardDrawAnimation } from '../components/flip7/CardDrawAnimation';
+import { useFlippingHusks } from '../hooks/useFlippingHusks';
+import { FlippingHusksLobby } from '../components/flippinghusks/FlippingHusksLobby';
+import { FlippingHusksBoard } from '../components/flippinghusks/FlippingHusksBoard';
+import { CardDrawAnimation } from '../components/flippinghusks/CardDrawAnimation';
 
-export function Flip7App() {
+export function FlippingHusksApp() {
   const [currentRoomId, setCurrentRoomId] = useState('');
 
   const {
@@ -14,7 +14,7 @@ export function Flip7App() {
     error, actionError,
     drawnCardAnim, clearDrawnCardAnim,
     joinRoom, startGame, sendAction,
-  } = useFlip7();
+  } = useFlippingHusks();
 
   function handleJoin(roomId, name) {
     setCurrentRoomId(roomId);
@@ -60,7 +60,7 @@ export function Flip7App() {
   if (gameState) {
     return (
       <>
-        <Flip7Board
+        <FlippingHusksBoard
           gameState={displayedGameState}
           playerId={playerId}
           isMyTurn={isMyTurn}
@@ -81,7 +81,7 @@ export function Flip7App() {
   }
 
   return (
-    <Flip7Lobby
+    <FlippingHusksLobby
       connected={connected}
       playerId={playerId}
       isHost={isHost}

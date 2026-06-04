@@ -12,11 +12,11 @@ const PROJECTS = [
     path: '/mtg',
   },
   {
-    id: 'flip7',
-    title: 'Flip 7',
+    id: 'flippinghusks',
+    title: 'Flipping Husks',
     description: 'Push-your-luck card game. Draw cards and avoid duplicates. First to 200 points wins.',
     status: 'WIP',
-    path: '/flip7',
+    path: '/flippinghusks',
   },
 ];
 

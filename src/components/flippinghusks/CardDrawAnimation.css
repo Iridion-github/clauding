@@ -1,6 +1,6 @@
 /* ── Overlay ──────────────────────────────────────────────────────────────────
    Covers the whole board during animation so nothing distracts.              */
-.f7anim-overlay {
+.fhanim-overlay {
   position: fixed;
   inset: 0;
   z-index: 3000;
@@ -10,7 +10,7 @@
 }
 
 /* ── Card wrapper – always fixed-centred, transforms do the movement ───────── */
-.f7anim-card-wrap {
+.fhanim-card-wrap {
   position: fixed;
   left: 50%;
   top: 50%;
@@ -18,11 +18,11 @@
 }
 
 /* ── Phase: falling ────────────────────────────────────────────────────────── */
-.f7anim-falling {
-  animation: f7-fall 1.2s cubic-bezier(0.3, 0, 0.6, 1) forwards;
+.fhanim-falling {
+  animation: fh-fall 1.2s cubic-bezier(0.3, 0, 0.6, 1) forwards;
 }
 
-@keyframes f7-fall {
+@keyframes fh-fall {
   0%   {
     transform: translate(-50%, calc(-50% - 100vh)) scale(1.35);
     opacity: 0;
@@ -35,38 +35,38 @@
 }
 
 /* ── Phase: flip-out (scaleX 1 → 0, face-down disappears) ─────────────────── */
-.f7anim-flip-out {
-  animation: f7-flip-out 0.2s linear forwards;
+.fhanim-flip-out {
+  animation: fh-flip-out 0.2s linear forwards;
 }
 
-@keyframes f7-flip-out {
+@keyframes fh-flip-out {
   from { transform: translate(-50%, -50%) scale(1.35) scaleX(1); }
   to   { transform: translate(-50%, -50%) scale(1.35) scaleX(0); }
 }
 
 /* ── Phase: flip-in (scaleX 0 → 1, face-up appears) ──────────────────────── */
-.f7anim-flip-in {
-  animation: f7-flip-in 0.35s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+.fhanim-flip-in {
+  animation: fh-flip-in 0.35s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
 }
 
-@keyframes f7-flip-in {
+@keyframes fh-flip-in {
   from { transform: translate(-50%, -50%) scale(1.35) scaleX(0); }
   to   { transform: translate(-50%, -50%) scale(1.35) scaleX(1); }
 }
 
 /* ── Phase: revealed (hold still) ─────────────────────────────────────────── */
-.f7anim-revealed {
+.fhanim-revealed {
   transform: translate(-50%, -50%) scale(1.35);
 }
 
 /* ── Phase: busting (tremble ±10° back and forth) ─────────────────────────── */
-.f7anim-busting {
-  animation: f7-bust 2s ease-in-out forwards;
+.fhanim-busting {
+  animation: fh-bust 2s ease-in-out forwards;
 }
 
 /* ── Bust side flashes ─────────────────────────────────────────────────────── */
 /* inset: -30px overshoots the viewport so blur doesn't get clipped at edges   */
-.f7anim-bust-flash {
+.fhanim-bust-flash {
   position: fixed;
   inset: -30px;
   pointer-events: none;
@@ -77,10 +77,10 @@
     rgba(220, 20, 20, 0.9)  100%
   );
   filter: blur(22px);
-  animation: f7-bust-flash 2s ease-in-out forwards;
+  animation: fh-bust-flash 2s ease-in-out forwards;
 }
 
-@keyframes f7-bust-flash {
+@keyframes fh-bust-flash {
   0%   { opacity: 0;    }
   8%   { opacity: 1;    }
   18%  { opacity: 0.07; }
@@ -94,7 +94,7 @@
 }
 
 /* ── Second-chance two-card display ───────────────────────────────────────── */
-.f7anim-sc-wrap {
+.fhanim-sc-wrap {
   position: fixed;
   left: 50%;
   top: 50%;
@@ -104,20 +104,20 @@
   gap: 18px;
 }
 
-.f7anim-sc-pair {
+.fhanim-sc-pair {
   display: flex;
   align-items: center;
   gap: 22px;
 }
 
-.f7anim-sc-vs {
+.fhanim-sc-vs {
   font-size: 30px;
   color: #f9a825;
   filter: drop-shadow(0 0 14px rgba(249, 168, 37, 0.85));
   flex-shrink: 0;
 }
 
-.f7anim-sc-label {
+.fhanim-sc-label {
   font-family: 'Georgia', serif;
   font-size: 16px;
   font-weight: bold;
@@ -128,26 +128,26 @@
 }
 
 /* entrance: scale up + fade in */
-.f7anim-sc-show {
-  animation: f7-sc-show 0.4s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+.fhanim-sc-show {
+  animation: fh-sc-show 0.4s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
 }
 
-@keyframes f7-sc-show {
+@keyframes fh-sc-show {
   from { transform: translate(-50%, -50%) scale(1.1); opacity: 0; }
   to   { transform: translate(-50%, -50%) scale(1.35); opacity: 1; }
 }
 
 /* exit: slide up and fade out over 1 s */
-.f7anim-sc-exit {
-  animation: f7-sc-exit 1s ease-in forwards;
+.fhanim-sc-exit {
+  animation: fh-sc-exit 1s ease-in forwards;
 }
 
-@keyframes f7-sc-exit {
+@keyframes fh-sc-exit {
   from { transform: translate(-50%, -50%) scale(1.35); opacity: 1; }
   to   { transform: translate(-50%, calc(-50% - 70vh)) scale(1.35); opacity: 0; }
 }
 
-@keyframes f7-bust {
+@keyframes fh-bust {
   0%   { transform: translate(-50%, -50%) scale(1.35) rotate(0deg); }
   8%   { transform: translate(-50%, -50%) scale(1.35) rotate(10deg); }
   16%  { transform: translate(-50%, -50%) scale(1.35) rotate(-10deg); }

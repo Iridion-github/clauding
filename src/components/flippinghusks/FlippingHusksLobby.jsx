@@ -7,7 +7,7 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import StarIcon from '@mui/icons-material/Star';
 
-export function Flip7Lobby({ connected, playerId, isHost, hostId, roomPlayers, roomId, error, onJoin, onStart }) {
+export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPlayers, roomId, error, onJoin, onStart }) {
   const navigate = useNavigate();
   const [inputRoomId, setInputRoomId] = useState('');
   const [name, setName] = useState('');
@@ -29,7 +29,7 @@ export function Flip7Lobby({ connected, playerId, isHost, hostId, roomPlayers, r
       <Stack spacing={1} sx={{ alignItems: 'center', mb: 4 }}>
         <Typography variant="h4" color="primary" fontWeight="bold"
           sx={{ textShadow: '0 2px 16px rgba(240,192,64,0.3)' }}>
-          Flip 7
+          Flipping Husks
         </Typography>
         <Typography variant="body2" color={connected ? 'secondary.main' : 'text.secondary'}>
           {connected ? '● Connected' : '○ Connecting…'}

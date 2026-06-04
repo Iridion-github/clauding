@@ -6,8 +6,8 @@ const path = require('path');
 const { createGameState } = require('./game/GameState');
 const { applyAction } = require('./game/GameEngine');
 const { buildDeck } = require('./game/Cards');
-const { createGame: createFlip7Game } = require('./flip7/GameState');
-const { applyAction: applyFlip7Action } = require('./flip7/GameEngine');
+const { createGame: createFlippingHusksGame } = require('./flippinghusks/GameState');
+const { applyAction: applyFlippingHusksAction } = require('./flippinghusks/GameEngine');
 
 const app = express();
 const server = http.createServer(app);
@@ -97,72 +97,72 @@ function sanitizeState(state) {
   return state; // Full state for now; add per-player views when needed
 }
 
-// ── Flip 7 namespace ────────────────────────────────────────────────────────
-// f7Rooms: { roomId: { hostId, players:[{socketId,id,name}], state } }
-const f7Rooms = {};
-const f7SocketToRoom = {};
+// ── Flipping Husks namespace ────────────────────────────────────────────────────────
+// fhRooms: { roomId: { hostId, players:[{socketId,id,name}], state } }
+const fhRooms = {};
+const fhSocketToRoom = {};
 
-const f7 = io.of('/flip7');
+const fh = io.of('/flippinghusks');
 
-f7.on('connection', (socket) => {
-  console.log('[Flip7] Connected:', socket.id);
+fh.on('connection', (socket) => {
+  console.log('[FlippingHusks] Connected:', socket.id);
 
-  socket.on('f7_join', ({ roomId, playerName }) => {
-    if (!f7Rooms[roomId]) {
-      f7Rooms[roomId] = { hostId: socket.id, players: [], state: null };
+  socket.on('fh_join', ({ roomId, playerName }) => {
+    if (!fhRooms[roomId]) {
+      fhRooms[roomId] = { hostId: socket.id, players: [], state: null };
     }
-    const room = f7Rooms[roomId];
+    const room = fhRooms[roomId];
 
-    if (room.state) { socket.emit('f7_error', { message: 'Game already started.' }); return; }
-    if (room.players.length >= 6) { socket.emit('f7_error', { message: 'Room is full (max 6).' }); return; }
-    if (room.players.find(p => p.socketId === socket.id)) { socket.emit('f7_error', { message: 'Already in room.' }); return; }
+    if (room.state) { socket.emit('fh_error', { message: 'Game already started.' }); return; }
+    if (room.players.length >= 6) { socket.emit('fh_error', { message: 'Room is full (max 6).' }); return; }
+    if (room.players.find(p => p.socketId === socket.id)) { socket.emit('fh_error', { message: 'Already in room.' }); return; }
 
     room.players.push({ socketId: socket.id, id: socket.id, name: playerName });
-    f7SocketToRoom[socket.id] = { roomId, playerId: socket.id };
+    fhSocketToRoom[socket.id] = { roomId, playerId: socket.id };
     socket.join(roomId);
 
-    socket.emit('f7_joined', { roomId, playerId: socket.id, isHost: room.hostId === socket.id });
-    f7.to(roomId).emit('f7_room_update', {
+    socket.emit('fh_joined', { roomId, playerId: socket.id, isHost: room.hostId === socket.id });
+    fh.to(roomId).emit('fh_room_update', {
       players: room.players.map(p => ({ id: p.id, name: p.name })),
       hostId: room.hostId,
     });
   });
 
-  socket.on('f7_start', ({ roomId }) => {
-    const room = f7Rooms[roomId];
-    if (!room) { socket.emit('f7_error', { message: 'Room not found.' }); return; }
-    if (room.hostId !== socket.id) { socket.emit('f7_error', { message: 'Only the host can start.' }); return; }
-    if (room.players.length < 2) { socket.emit('f7_error', { message: 'Need at least 2 players.' }); return; }
+  socket.on('fh_start', ({ roomId }) => {
+    const room = fhRooms[roomId];
+    if (!room) { socket.emit('fh_error', { message: 'Room not found.' }); return; }
+    if (room.hostId !== socket.id) { socket.emit('fh_error', { message: 'Only the host can start.' }); return; }
+    if (room.players.length < 2) { socket.emit('fh_error', { message: 'Need at least 2 players.' }); return; }
 
-    room.state = createFlip7Game(room.players.map(p => ({ id: p.id, name: p.name })));
-    f7.to(roomId).emit('f7_game_started', { state: room.state });
+    room.state = createFlippingHusksGame(room.players.map(p => ({ id: p.id, name: p.name })));
+    fh.to(roomId).emit('fh_game_started', { state: room.state });
   });
 
-  socket.on('f7_action', ({ action }) => {
-    const meta = f7SocketToRoom[socket.id];
-    if (!meta) { socket.emit('f7_error', { message: 'Not in a room.' }); return; }
-    const room = f7Rooms[meta.roomId];
-    if (!room?.state) { socket.emit('f7_error', { message: 'Game not started.' }); return; }
+  socket.on('fh_action', ({ action }) => {
+    const meta = fhSocketToRoom[socket.id];
+    if (!meta) { socket.emit('fh_error', { message: 'Not in a room.' }); return; }
+    const room = fhRooms[meta.roomId];
+    if (!room?.state) { socket.emit('fh_error', { message: 'Game not started.' }); return; }
 
-    const result = applyFlip7Action(room.state, meta.playerId, action);
-    if (!result.ok) { socket.emit('f7_action_rejected', { error: result.error }); return; }
+    const result = applyFlippingHusksAction(room.state, meta.playerId, action);
+    if (!result.ok) { socket.emit('fh_action_rejected', { error: result.error }); return; }
 
     room.state = result.state;
-    f7.to(meta.roomId).emit('f7_state_update', { state: room.state });
+    fh.to(meta.roomId).emit('fh_state_update', { state: room.state });
   });
 
   socket.on('disconnect', () => {
-    const meta = f7SocketToRoom[socket.id];
+    const meta = fhSocketToRoom[socket.id];
     if (meta) {
-      const room = f7Rooms[meta.roomId];
+      const room = fhRooms[meta.roomId];
       if (room) {
         room.players = room.players.filter(p => p.socketId !== socket.id);
-        f7.to(meta.roomId).emit('f7_player_left', { playerId: meta.playerId });
-        if (room.players.length === 0) delete f7Rooms[meta.roomId];
+        fh.to(meta.roomId).emit('fh_player_left', { playerId: meta.playerId });
+        if (room.players.length === 0) delete fhRooms[meta.roomId];
       }
-      delete f7SocketToRoom[socket.id];
+      delete fhSocketToRoom[socket.id];
     }
-    console.log('[Flip7] Disconnected:', socket.id);
+    console.log('[FlippingHusks] Disconnected:', socket.id);
   });
 });
 

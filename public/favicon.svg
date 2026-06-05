@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Back card — gold, tilted left -->
+  <rect x="5" y="10" width="32" height="44" rx="4"
+        fill="#f0c040" stroke="#b8860b" stroke-width="1.5"
+        transform="rotate(-15, 21, 32)"/>
+  <!-- Front card — white -->
+  <rect x="27" y="6" width="32" height="44" rx="4"
+        fill="#ffffff" stroke="#cccccc" stroke-width="1.5"/>
+  <!-- Spade suit on front card -->
+  <text x="43" y="39" text-anchor="middle"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="24" fill="#111111">♠</text>
+</svg>

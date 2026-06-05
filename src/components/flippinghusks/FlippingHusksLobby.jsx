@@ -9,14 +9,18 @@ import StarIcon from '@mui/icons-material/Star';
 
 export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPlayers, roomId, error, onJoin, onStart }) {
   const navigate = useNavigate();
-  const [inputRoomId, setInputRoomId] = useState('');
-  const [name, setName] = useState('');
+  const [inputRoomId, setInputRoomId] = useState(() => localStorage.getItem('fh_roomCode') ?? '');
+  const [name, setName] = useState(() => localStorage.getItem('fh_playerName') ?? '');
   const inRoom = roomPlayers.length > 0;
 
   function handleJoin(e) {
     e.preventDefault();
-    if (!name.trim() || !inputRoomId.trim()) return;
-    onJoin(inputRoomId.trim().toUpperCase(), name.trim());
+    const room = inputRoomId.trim().toUpperCase();
+    const playerName = name.trim();
+    if (!playerName || !room) return;
+    localStorage.setItem('fh_roomCode', room);
+    localStorage.setItem('fh_playerName', playerName);
+    onJoin(room, playerName);
   }
 
   return (

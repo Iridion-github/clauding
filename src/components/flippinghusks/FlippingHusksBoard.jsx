@@ -237,7 +237,7 @@ function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePla
       <button
         className="fhaction-btn fhaction-btn-stay"
         disabled={self?.status !== 'active'}
-        onClick={() => sendAction({ type: 'STAY' })}
+        onClick={() => { new Audio('/sounds/chicken.mp3').play().catch(() => {}); sendAction({ type: 'STAY' }); }}
       >
         <span className="fhaction-btn-icon">✋</span>
         <span className="fhaction-btn-main">Stay</span>

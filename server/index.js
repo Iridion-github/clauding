@@ -132,7 +132,7 @@ fh.on('connection', (socket) => {
     const room = fhRooms[roomId];
     if (!room) { socket.emit('fh_error', { message: 'Room not found.' }); return; }
     if (room.hostId !== socket.id) { socket.emit('fh_error', { message: 'Only the host can start.' }); return; }
-    if (room.players.length < 2) { socket.emit('fh_error', { message: 'Need at least 2 players.' }); return; }
+    if (room.players.length < 1) { socket.emit('fh_error', { message: 'No players in room.' }); return; }
 
     room.state = createFlippingHusksGame(room.players.map(p => ({ id: p.id, name: p.name })));
     fh.to(roomId).emit('fh_game_started', { state: fhClientState(room.state) });

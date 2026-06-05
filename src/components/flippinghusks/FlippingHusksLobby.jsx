@@ -86,10 +86,9 @@ export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPl
             {error && <Alert severity="error">{error}</Alert>}
 
             {isHost ? (
-              <Button variant="contained" color="primary" size="large" fullWidth
-                disabled={roomPlayers.length < 2}
+              <Button variant="contained" color={roomPlayers.length < 2 ? 'warning' : 'primary'} size="large" fullWidth
                 onClick={onStart}>
-                {roomPlayers.length < 2 ? 'Waiting for players…' : `Start Game (${roomPlayers.length} players)`}
+                {roomPlayers.length < 2 ? 'Start (Debug Mode)' : `Start Game (${roomPlayers.length} players)`}
               </Button>
             ) : (
               <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', fontStyle: 'italic' }}>

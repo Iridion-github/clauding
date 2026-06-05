@@ -363,3 +363,82 @@
   gap: 18px;
   align-items: center;
 }
+
+/* ── Mobile / portrait layout ────────────────────────────────────────────────── */
+@media (orientation: portrait), (max-width: 640px) {
+
+  /* Single-column board — sidebar leaves the grid */
+  .fhboard {
+    grid-template-columns: 1fr;
+  }
+
+  /* Shrink my-area min-height so cards don't dominate a small screen */
+  .fhboard-me-cards {
+    min-height: 120px;
+  }
+
+  /* Narrow opponents down so more fit per row */
+  .fhopponent {
+    min-width: 140px;
+  }
+
+  /* Action bar and turn banner span full width */
+  .fhaction-bar  { right: 0; }
+  .fhturn-banner { right: 0; }
+
+  /* Buttons grow to fill the bar instead of fixed 210 px */
+  .fhaction-btn {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+    height: 64px;
+  }
+
+  /* Log: completely absent when closed — no visual, no hit area */
+  .fhboard-log-sidebar {
+    display: none;
+  }
+
+  /* Log: overlay above action bar when open */
+  .fhboard-log-sidebar.fhlog-open {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 104px;
+    height: 42vh;
+    border-left: none;
+    border-top: 1px solid #2a2a2a;
+    background: rgba(13, 17, 23, 0.97);
+    backdrop-filter: blur(10px);
+    z-index: 500;
+  }
+
+  /* Target picker — full width, just above action bar */
+  .fhtarget-picker {
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-width: none;
+    bottom: 114px;
+  }
+  .fhtarget-picker-inner {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .fhtarget-picker-card-col {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  /* Observer modal — full width */
+  .fhobserver-modal {
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-width: none;
+    bottom: 114px;
+  }
+}

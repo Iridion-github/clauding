@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { Button, Chip, Stack, Typography, Box } from '@mui/material';
+import { useEffect, useRef, useState } from 'react';
+import { Button, Chip, Stack, Typography, Box, useMediaQuery } from '@mui/material';
 import AcUnitIcon from '@mui/icons-material/AcUnit';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import { FlippingHusksCard } from './FlippingHusksCard';
@@ -15,6 +15,9 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
   const myPendingIsOpen = pendingAction != null && pendingAction.drawerId === playerId;
   const otherPending    = pendingAction != null && pendingAction.drawerId !== playerId;
   const hasVotedPlayAgain = playAgainVotes.votes.includes(playerId);
+
+  const isMobile = useMediaQuery('(orientation: portrait), (max-width: 640px)');
+  const [logOpen, setLogOpen] = useState(false);
 
   const logRef = useRef(null);
   useEffect(() => {
@@ -40,13 +43,25 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
 
         {/* Header */}
         <div className="fhboard-header">
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-            <Typography variant="h6" color="primary" fontWeight="bold">Flipping Husks</Typography>
-            <Chip label={`Round ${round}`} size="small" variant="outlined" />
-            <Chip label={`Deck: ${drawPile.length}`} size="small" variant="outlined" />
-            {phase === 'round_end' && <Chip label="Round over" color="warning" size="small" />}
-            {phase === 'finished'  && <Chip label={`${players[winner].name} wins!`} color="primary" />}
-          </Stack>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap', flex: 1 }}>
+              <Typography variant="h6" color="primary" fontWeight="bold">Flipping Husks</Typography>
+              <Chip label={`Round ${round}`} size="small" variant="outlined" />
+              <Chip label={`Deck: ${drawPile.length}`} size="small" variant="outlined" />
+              {phase === 'round_end' && <Chip label="Round over" color="warning" size="small" />}
+              {phase === 'finished'  && <Chip label={`${players[winner].name} wins!`} color="primary" />}
+            </Stack>
+            {isMobile && (
+              <Chip
+                label={logOpen ? '✕ Log' : '📜 Log'}
+                size="small"
+                onClick={() => setLogOpen(o => !o)}
+                color={logOpen ? 'primary' : 'default'}
+                variant={logOpen ? 'filled' : 'outlined'}
+                sx={{ cursor: 'pointer', flexShrink: 0 }}
+              />
+            )}
+          </Box>
         </div>
 
         {/* Opponents */}
@@ -115,7 +130,7 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
       </div>
 
       {/* ── Log sidebar ─────────────────────────────────────────────────── */}
-      <div className="fhboard-log-sidebar">
+      <div className={`fhboard-log-sidebar${isMobile && logOpen ? ' fhlog-open' : ''}`}>
         <div className="fhboard-log-title">Event Log</div>
         <div className="fhboard-log-entries" ref={logRef}>
           {[...log].reverse().map((entry, i) => (

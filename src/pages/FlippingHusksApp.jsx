@@ -23,6 +23,14 @@ export function FlippingHusksApp() {
     }
   }, [gameState?.phase]);
 
+  // If an animation is playing when a target-picker modal opens for this player,
+  // cancel it immediately so the modal isn't buried under the animation layer.
+  useEffect(() => {
+    if (gameState?.pendingAction?.drawerId === playerId && drawnCardAnim) {
+      clearDrawnCardAnim();
+    }
+  }, [gameState, playerId, drawnCardAnim, clearDrawnCardAnim]);
+
   function handleJoin(roomId, name) {
     setCurrentRoomId(roomId);
     joinRoom(roomId, name);

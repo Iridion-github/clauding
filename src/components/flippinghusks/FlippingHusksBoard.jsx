@@ -308,6 +308,7 @@ function PlayAgainModal({ votes, players }) {
 
 function TargetPicker({ type, card, players, playerOrder, playerId, onSelect }) {
   const theme = PICKER_THEME[type] ?? PICKER_THEME.freeze;
+  const onlySelf = playerOrder.filter(pid => players[pid].status === 'active').every(pid => pid === playerId);
 
   return (
     <div
@@ -327,7 +328,7 @@ function TargetPicker({ type, card, players, playerOrder, playerId, onSelect }) 
           <div className="fhtarget-picker-title" style={{ color: theme.accent }}>
             {theme.label}!
             <Typography variant="body2" color="text.secondary" sx={{ ml: 1, fontStyle: 'italic' }}>
-              Choose a target
+              {onlySelf ? 'No other targets — you must target yourself' : 'Choose a target'}
             </Typography>
           </div>
           <p className="fhtarget-picker-hint">{theme.hint}</p>

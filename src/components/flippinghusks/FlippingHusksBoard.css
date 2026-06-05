@@ -426,11 +426,22 @@
   }
   .fhtarget-picker-inner {
     flex-direction: column;
+    align-items: center;
     gap: 12px;
   }
   .fhtarget-picker-card-col {
     flex-direction: row;
     align-items: center;
+    justify-content: center;
+  }
+  .fhtarget-picker-content {
+    align-items: center;
+    text-align: center;
+    width: 100%;
+  }
+  .fhtarget-picker-title {
+    justify-content: center;
+    flex-wrap: wrap;
   }
 
   /* Observer modal — full width */

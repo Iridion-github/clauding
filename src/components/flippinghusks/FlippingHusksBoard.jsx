@@ -8,8 +8,8 @@ import './FlippingHusksBoard.css';
 const STATUS_COLOR = { active: 'default', stayed: 'success', busted: 'error', flippinghusks: 'primary' };
 const STATUS_LABEL = { active: 'Playing', stayed: 'Stayed', busted: 'Bust!', flippinghusks: 'Flipping Husks!' };
 
-export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain }) {
-  const { players, playerOrder, activePlayerId, phase, round, drawPile, log, winner, pendingAction } = gameState;
+export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain, animating }) {
+  const { players, playerOrder, activePlayerId, phase, round, drawPile, discardCount, log, winner, pendingAction } = gameState;
   const self = players[playerId];
   const opponents = playerOrder.filter(pid => pid !== playerId);
   const myPendingIsOpen = pendingAction != null && pendingAction.drawerId === playerId;
@@ -48,6 +48,7 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
               <Typography variant="h6" color="primary" fontWeight="bold">Flipping Husks</Typography>
               <Chip label={`Round ${round}`} size="small" variant="outlined" />
               <Chip label={`Deck: ${drawPile.length}`} size="small" variant="outlined" />
+              <Chip label={`Used: ${discardCount ?? 0}`} size="small" variant="outlined" />
               {phase === 'round_end' && <Chip label="Round over" color="warning" size="small" />}
               {phase === 'finished'  && <Chip label={`${players[winner].name} wins!`} color="primary" />}
             </Stack>
@@ -166,7 +167,7 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
       )}
 
       {/* ── Target picker (drawer chooses) ───────────────────────────────── */}
-      {myPendingIsOpen && (
+      {myPendingIsOpen && !animating && (
         <TargetPicker
           type={pendingAction.type}
           card={pendingAction.card}
@@ -181,7 +182,7 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
       )}
 
       {/* ── Observer modal (others watch while someone chooses) ───────────── */}
-      {otherPending && (
+      {otherPending && !animating && (
         <ObserverModal
           drawerName={players[pendingAction.drawerId]?.name}
           type={pendingAction.type}
@@ -348,7 +349,7 @@ function TargetPicker({ type, card, players, playerOrder, playerId, onSelect }) 
           </div>
           <p className="fhtarget-picker-hint">{theme.hint}</p>
 
-          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', justifyContent: 'center' }}>
             {playerOrder.map(pid => {
               const p = players[pid];
               const isSelf = pid === playerId;

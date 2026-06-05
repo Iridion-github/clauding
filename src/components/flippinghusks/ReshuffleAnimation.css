@@ -1,0 +1,106 @@
+/* Overlay ─────────────────────────────────────────────────────────────────── */
+.fh-rs-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  background: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* fade in then hold, fade out in the final 0.45s */
+  animation:
+    fh-rs-fade-in  0.35s ease forwards,
+    fh-rs-fade-out 0.45s ease 3.55s forwards;
+}
+
+@keyframes fh-rs-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes fh-rs-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* Stage ────────────────────────────────────────────────────────────────────── */
+.fh-rs-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 36px;
+}
+
+/* Deck container — cards are stacked absolutely inside ─────────────────────── */
+.fh-rs-deck {
+  position: relative;
+  width: 72px;
+  height: 104px;
+}
+
+/* Individual card ────────────────────────────────────────────────────────────
+   --offset ranges from -3 to 3.
+   At the peak of the animation cards fan out radially: rotating by offset × 14°
+   and shifting horizontally by offset × 18px.
+   Each card also rises slightly (translateY(-22px)) so the deck visually "lifts".
+   Staggered animation-delay (set inline) makes the shuffle feel continuous.   */
+.fh-rs-card {
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  background: linear-gradient(145deg, #f5d060 0%, #c8900a 60%, #8b5e00 100%);
+  border: 1.5px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform-origin: center bottom;
+  animation: fh-rs-shuffle 1.6s ease-in-out infinite;
+}
+
+@keyframes fh-rs-shuffle {
+  0%   {
+    transform: rotate(0deg) translateX(0) translateY(0) scale(1);
+  }
+  35%  {
+    transform:
+      rotate(calc(var(--offset) * 14deg))
+      translateX(calc(var(--offset) * 18px))
+      translateY(-22px)
+      scale(0.92);
+  }
+  50%  {
+    transform:
+      rotate(calc(var(--offset) * 10deg))
+      translateX(calc(var(--offset) * 13px))
+      translateY(-14px)
+      scale(0.95);
+  }
+  65%  {
+    transform:
+      rotate(calc(var(--offset) * 14deg))
+      translateX(calc(var(--offset) * 18px))
+      translateY(-22px)
+      scale(0.92);
+  }
+  100% {
+    transform: rotate(0deg) translateX(0) translateY(0) scale(1);
+  }
+}
+
+/* Label ──────────────────────────────────────────────────────────────────────*/
+.fh-rs-label {
+  margin: 0;
+  color: #f0c040;
+  font-family: 'Georgia', serif;
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-align: center;
+  text-shadow: 0 0 24px rgba(240, 192, 64, 0.55);
+  animation: fh-rs-label-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes fh-rs-label-pulse {
+  0%, 100% { opacity: 0.65; }
+  50%      { opacity: 1;    }
+}

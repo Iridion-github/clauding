@@ -24,9 +24,10 @@ function createGame(players) {
     playerOrder: players.map(p => p.id),
     players: playerMap,
     drawPile: deck,
+    discardPile: [],     // persists across rounds; reshuffled into drawPile when deck runs out
     activePlayerId: null,
-    pendingAction: null,  // { type:'freeze'|'flip_three', drawerId, card }
-    dealQueue: [],        // players still waiting for their initial card
+    pendingAction: null, // { type:'freeze'|'flip_three', drawerId, card }
+    dealQueue: [],       // players still waiting for their initial card
     winner: null,
     log: [],
   };
@@ -42,23 +43,15 @@ function createGame(players) {
 }
 
 // ── Initial deal ──────────────────────────────────────────────────────────────
-// Deal one card to the next player in dealQueue via the same applyCard path
-// used during normal play (no `auto` flag), so Freeze and Flip Three set a
-// pendingAction instead of applying instantly.
 function dealOneInitial(state) {
   if (state.dealQueue.length === 0) return;
   const playerId = state.dealQueue.shift();
-  // Skip players who were targeted by a Freeze or Flip Three during the deal
-  // sequence and already received a card (or were frozen/busted) before their
-  // own initial deal slot came up.
   if (state.players[playerId].cards.length > 0) return;
   if (state.drawPile.length === 0) replenish(state);
   const card = state.drawPile.shift();
   applyCard(state, playerId, card, {});
 }
 
-// Drain dealQueue until it's empty, a pendingAction is created, or the round ends.
-// Sets activePlayerId to the pending drawer when stopping early.
 function continueDeal(state) {
   while (state.dealQueue.length > 0 && !state.pendingAction && state.phase === 'playing') {
     dealOneInitial(state);
@@ -76,10 +69,6 @@ function drawAndProcess(state, playerId) {
 }
 
 // ── Core card resolution ──────────────────────────────────────────────────────
-// opts.auto = true  → Freeze and Flip Three apply immediately (forced draws on a
-//                     Flip Three target, or a second Flip Three inside a forced draw).
-// opts.auto = false → Freeze and Flip Three open a pendingAction so the drawer
-//                     chooses a target via the UI.
 function applyCard(state, playerId, card, opts = {}) {
   const player = state.players[playerId];
   const auto   = opts.auto === true;
@@ -94,6 +83,9 @@ function applyCard(state, playerId, card, opts = {}) {
           const savedCard = idx !== -1 ? player.cards[idx] : null;
           if (idx !== -1) player.cards.splice(idx, 1);
           player.secondChances--;
+          // Both the rejected duplicate and the consumed SC card leave the game immediately
+          state.discardPile.push(card);
+          if (savedCard) state.discardPile.push(savedCard);
           state.secondChanceEvent = { playerId, drawnCard: card, savedCard };
           log(state, `${player.name} used Second Chance — saved from busting on ${card.label}!`);
           return;
@@ -188,7 +180,6 @@ function resolveFreeze(state, drawerId, targetId) {
 }
 
 // ── Flip Three resolution ─────────────────────────────────────────────────────
-// Forced draws on the target use auto:true — no nested modals.
 function resolveFlipThree(state, drawerId, targetId) {
   const pa = state.pendingAction;
   if (!pa || pa.type !== 'flip_three' || pa.drawerId !== drawerId) return false;
@@ -233,6 +224,10 @@ function calcScore(player) {
 
 function endRound(state) {
   if (state.phase !== 'playing') return;
+  // Discard the pending-action card before clearing it
+  if (state.pendingAction?.card) {
+    state.discardPile.push(state.pendingAction.card);
+  }
   state.pendingAction = null;
   state.dealQueue     = [];
   for (const pid of state.playerOrder) {
@@ -253,21 +248,20 @@ function endRound(state) {
 }
 
 function startNextRound(state) {
-  const deck = buildDeck();
-  shuffle(deck);
-  state.drawPile      = deck;
-  state.round        += 1;
-  state.phase         = 'playing';
-  state.pendingAction = null;
-  state.log           = [];
-
+  // Move all player cards to the discard pile — deck persists across rounds
   for (const pid of state.playerOrder) {
     const p = state.players[pid];
+    state.discardPile.push(...p.cards);
     p.cards         = [];
     p.status        = 'active';
     p.secondChances = 0;
     p.roundScore    = null;
   }
+
+  state.round        += 1;
+  state.phase         = 'playing';
+  state.pendingAction = null;
+  state.log           = [];
 
   const first = state.playerOrder.shift();
   state.playerOrder.push(first);
@@ -284,6 +278,8 @@ function resetGame(state) {
   shuffle(deck);
 
   state.drawPile          = deck;
+  state.discardPile       = [];
+  state.reshuffleEvent    = null;
   state.round             = 1;
   state.phase             = 'playing';
   state.pendingAction     = null;
@@ -307,10 +303,22 @@ function resetGame(state) {
   }
 }
 
+// Reshuffle the discard pile back into the draw pile.
+// Sets reshuffleEvent so the engine can signal clients to play the animation.
 function replenish(state) {
-  const fresh = buildDeck();
-  shuffle(fresh);
-  state.drawPile = fresh;
+  if (state.discardPile && state.discardPile.length > 0) {
+    const fresh = [...state.discardPile];
+    shuffle(fresh);
+    state.drawPile    = fresh;
+    state.discardPile = [];
+  } else {
+    // Safety fallback — shouldn't happen in normal play
+    const fresh = buildDeck();
+    shuffle(fresh);
+    state.drawPile = fresh;
+  }
+  state.reshuffleEvent = true;
+  log(state, '⟳ Deck exhausted — discard pile reshuffled back in.');
 }
 
 function log(state, msg) {

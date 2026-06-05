@@ -135,7 +135,7 @@ fh.on('connection', (socket) => {
     if (room.players.length < 2) { socket.emit('fh_error', { message: 'Need at least 2 players.' }); return; }
 
     room.state = createFlippingHusksGame(room.players.map(p => ({ id: p.id, name: p.name })));
-    fh.to(roomId).emit('fh_game_started', { state: room.state });
+    fh.to(roomId).emit('fh_game_started', { state: fhClientState(room.state) });
   });
 
   socket.on('fh_action', ({ action }) => {
@@ -148,7 +148,7 @@ fh.on('connection', (socket) => {
     if (!result.ok) { socket.emit('fh_action_rejected', { error: result.error }); return; }
 
     room.state = result.state;
-    fh.to(meta.roomId).emit('fh_state_update', { state: room.state });
+    fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
   });
 
   socket.on('fh_play_again', () => {
@@ -167,7 +167,7 @@ fh.on('connection', (socket) => {
     if (room.playAgainVotes.size >= room.players.length) {
       room.playAgainVotes.clear();
       resetFlippingHusksGame(room.state);
-      fh.to(meta.roomId).emit('fh_state_update', { state: room.state });
+      fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
     }
   });
 
@@ -186,6 +186,12 @@ fh.on('connection', (socket) => {
     console.log('[FlippingHusks] Disconnected:', socket.id);
   });
 });
+
+// Strip server-only discardPile array; send just the count + reshuffleEvent to clients
+function fhClientState(state) {
+  const { discardPile, ...rest } = state;
+  return { ...rest, discardCount: (discardPile || []).length };
+}
 
 // Serve the React production build when it exists (i.e. when deployed)
 const buildDir = path.join(__dirname, '../build');

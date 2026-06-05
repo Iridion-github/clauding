@@ -84,7 +84,8 @@ function advance(state) {
 
 function clone(state) {
   const c = JSON.parse(JSON.stringify(state));
-  c.secondChanceEvent = null; // never carry an event into the next action
+  c.secondChanceEvent = null; // never carry events into the next action
+  c.reshuffleEvent    = null;
   return c;
 }
 function ok(state)    { return { ok: true, state }; }

@@ -3,6 +3,7 @@ import { useFlippingHusks } from '../hooks/useFlippingHusks';
 import { FlippingHusksLobby } from '../components/flippinghusks/FlippingHusksLobby';
 import { FlippingHusksBoard } from '../components/flippinghusks/FlippingHusksBoard';
 import { CardDrawAnimation } from '../components/flippinghusks/CardDrawAnimation';
+import { ReshuffleAnimation } from '../components/flippinghusks/ReshuffleAnimation';
 
 export function FlippingHusksApp() {
   const [currentRoomId, setCurrentRoomId] = useState('');
@@ -12,7 +13,7 @@ export function FlippingHusksApp() {
     roomPlayers, gameState,
     isMyTurn, self,
     error, actionError,
-    drawnCardAnim, clearDrawnCardAnim,
+    animQueue, advanceAnim,
     playAgainVotes, votePlayAgain,
     joinRoom, startGame, sendAction,
   } = useFlippingHusks();
@@ -23,54 +24,57 @@ export function FlippingHusksApp() {
     }
   }, [gameState?.phase]);
 
-  // If an animation is playing when a target-picker modal opens for this player,
-  // cancel it immediately so the modal isn't buried under the animation layer.
-  useEffect(() => {
-    if (gameState?.pendingAction?.drawerId === playerId && drawnCardAnim) {
-      clearDrawnCardAnim();
-    }
-  }, [gameState, playerId, drawnCardAnim, clearDrawnCardAnim]);
-
   function handleJoin(roomId, name) {
     setCurrentRoomId(roomId);
     joinRoom(roomId, name);
   }
 
-  // While a card-draw animation is playing, adjust the displayed state so the
-  // board doesn't spoil the outcome before the animation reveals it.
+  const currentAnim = animQueue[0] ?? null;
+
+  // While animations are queued, adjust the displayed state so the board doesn't
+  // spoil cards or outcomes before each animation in the sequence reveals them.
   const displayedGameState = useMemo(() => {
-    if (!gameState || !drawnCardAnim) return gameState;
+    if (!gameState || animQueue.length === 0) return gameState;
+    const cur     = animQueue[0];
     const players = { ...gameState.players };
 
-    if (drawnCardAnim.secondChanceCard) {
-      // Second-chance save: the sc card was already removed from the player's hand
-      // in the real state — put it back visually until the animation is done.
-      const pid = drawnCardAnim.savedPlayerId;
+    // Second-chance animation: restore the saved SC card visually while it plays.
+    if (cur.secondChanceCard) {
+      const pid = cur.savedPlayerId;
       const p   = players[pid];
       if (p) {
         players[pid] = {
           ...p,
-          cards: [...p.cards, drawnCardAnim.secondChanceCard],
+          cards: [...p.cards, cur.secondChanceCard],
           secondChances: p.secondChances + 1,
         };
       }
-      return { ...gameState, players };
     }
 
-    // Normal draw: hide the drawn card (and mask bust status) until revealed.
-    const cardId = drawnCardAnim.card.id;
+    // Hide every queued non-SC, non-reshuffle card from the board until its animation plays.
+    const queuedIds = new Set(
+      animQueue.filter(a => a.card && !a.secondChanceCard).map(a => a.card.id)
+    );
+    if (queuedIds.size === 0) return { ...gameState, players };
+
+    const queueHasBust = animQueue.some(a => a.isBust);
+    const queueHasFH   = animQueue.some(a => a.isFlippingHusks);
+
     for (const pid of gameState.playerOrder) {
-      const p = players[pid];
-      if (!p.cards.some(c => c.id === cardId)) continue;
+      const p        = players[pid];
+      const filtered = p.cards.filter(c => !queuedIds.has(c.id));
+      if (filtered.length === p.cards.length) continue;
       players[pid] = {
         ...p,
-        cards: p.cards.filter(c => c.id !== cardId),
-        status: drawnCardAnim.isBust ? 'active' : p.status,
+        cards: filtered,
+        status:
+          queueHasBust && p.status === 'busted'        ? 'active' :
+          queueHasFH   && p.status === 'flippinghusks' ? 'active' :
+          p.status,
       };
-      break;
     }
     return { ...gameState, players };
-  }, [gameState, drawnCardAnim]);
+  }, [gameState, animQueue]);
 
   if (gameState) {
     return (
@@ -83,15 +87,19 @@ export function FlippingHusksApp() {
           sendAction={sendAction}
           playAgainVotes={playAgainVotes}
           votePlayAgain={votePlayAgain}
+          animating={currentAnim !== null}
         />
-        {drawnCardAnim && (
+        {currentAnim?.type === 'reshuffle' && (
+          <ReshuffleAnimation key="reshuffle" onDone={advanceAnim} />
+        )}
+        {currentAnim && currentAnim.type !== 'reshuffle' && (
           <CardDrawAnimation
-            key={drawnCardAnim.card.id}
-            card={drawnCardAnim.card}
-            isBust={drawnCardAnim.isBust}
-            isFlippingHusks={drawnCardAnim.isFlippingHusks ?? false}
-            secondChanceCard={drawnCardAnim.secondChanceCard ?? null}
-            onDone={clearDrawnCardAnim}
+            key={currentAnim.card.id}
+            card={currentAnim.card}
+            isBust={currentAnim.isBust}
+            isFlippingHusks={currentAnim.isFlippingHusks ?? false}
+            secondChanceCard={currentAnim.secondChanceCard ?? null}
+            onDone={advanceAnim}
           />
         )}
       </>

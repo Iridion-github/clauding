@@ -8,12 +8,13 @@ import './FlippingHusksBoard.css';
 const STATUS_COLOR = { active: 'default', stayed: 'success', busted: 'error', flippinghusks: 'primary' };
 const STATUS_LABEL = { active: 'Playing', stayed: 'Stayed', busted: 'Bust!', flippinghusks: 'Flipping Husks!' };
 
-export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError, sendAction }) {
+export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain }) {
   const { players, playerOrder, activePlayerId, phase, round, drawPile, log, winner, pendingAction } = gameState;
   const self = players[playerId];
   const opponents = playerOrder.filter(pid => pid !== playerId);
   const myPendingIsOpen = pendingAction != null && pendingAction.drawerId === playerId;
   const otherPending    = pendingAction != null && pendingAction.drawerId !== playerId;
+  const hasVotedPlayAgain = playAgainVotes.votes.includes(playerId);
 
   const logRef = useRef(null);
   useEffect(() => {
@@ -135,6 +136,17 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
           players={players} playerOrder={playerOrder}
           activePlayerId={activePlayerId} winner={winner}
           sendAction={sendAction}
+          hasVotedPlayAgain={hasVotedPlayAgain}
+          votePlayAgain={votePlayAgain}
+          playAgainVoteCount={playAgainVotes.votes.length}
+        />
+      )}
+
+      {/* ── Play Again modal ─────────────────────────────────────────────── */}
+      {phase === 'finished' && hasVotedPlayAgain && (
+        <PlayAgainModal
+          votes={playAgainVotes.votes}
+          players={playerOrder.map(pid => ({ id: pid, name: players[pid].name }))}
         />
       )}
 
@@ -167,7 +179,7 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
 }
 
 // ── Fixed bottom action bar ───────────────────────────────────────────────────
-function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePlayerId, winner, sendAction }) {
+function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePlayerId, winner, sendAction, hasVotedPlayAgain, votePlayAgain, playAgainVoteCount }) {
   if (phase === 'round_end') {
     return (
       <div className="fhaction-bar">
@@ -184,6 +196,19 @@ function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePla
     return (
       <div className="fhaction-bar">
         <Scoreboard players={players} playerOrder={playerOrder} final />
+        <button
+          className="fhaction-btn fhaction-btn-stay"
+          onClick={votePlayAgain}
+          disabled={hasVotedPlayAgain}
+        >
+          <span className="fhaction-btn-icon">↺</span>
+          <span className="fhaction-btn-main">{hasVotedPlayAgain ? 'Waiting…' : 'Play Again'}</span>
+          <span className="fhaction-btn-sub">
+            {hasVotedPlayAgain
+              ? `${playAgainVoteCount}/${playerOrder.length} ready`
+              : 'Start a new game'}
+          </span>
+        </button>
       </div>
     );
   }
@@ -252,6 +277,34 @@ const PICKER_THEME = {
   freeze:    { border: '#1565c0', glow: 'rgba(21,101,192,0.6)', accent: '#64b5f6', icon: '❄', label: 'FREEZE', hint: 'Target is forced to stay. You can target yourself to bank your score.' },
   flip_three:{ border: '#6a1b9a', glow: 'rgba(106,27,154,0.6)', accent: '#ce93d8', icon: '↺', label: 'FLIP THREE', hint: 'Target draws 3 forced cards. You can target yourself.' },
 };
+
+// ── Play Again modal ──────────────────────────────────────────────────────────
+function PlayAgainModal({ votes, players }) {
+  return (
+    <div className="fhplay-again-overlay">
+      <div className="fhplay-again-modal">
+        <Typography variant="h6" sx={{ textAlign: 'center', mb: 2, fontWeight: 'bold' }}>
+          ↺ Play Again?
+        </Typography>
+        <Stack spacing={1.5}>
+          {players.map(p => {
+            const ready = votes.includes(p.id);
+            return (
+              <div key={p.id} className={`fhplay-again-row ${ready ? 'ready' : 'waiting'}`}>
+                <span className="fhplay-again-icon">{ready ? '✓' : '⏳'}</span>
+                <span className="fhplay-again-name">{p.name}</span>
+                <span className="fhplay-again-status">{ready ? 'Ready!' : 'Waiting…'}</span>
+              </div>
+            );
+          })}
+        </Stack>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+          {votes.length} / {players.length} ready
+        </Typography>
+      </div>
+    </div>
+  );
+}
 
 function TargetPicker({ type, card, players, playerOrder, playerId, onSelect }) {
   const theme = PICKER_THEME[type] ?? PICKER_THEME.freeze;

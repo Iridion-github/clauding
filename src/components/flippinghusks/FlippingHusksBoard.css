@@ -305,6 +305,38 @@
   font-weight: normal;
 }
 
+/* ── Play Again modal ────────────────────────────────────────────────────────── */
+.fhplay-again-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 900;
+}
+.fhplay-again-modal {
+  background: #1a1a2e;
+  border: 2px solid #7c4dff;
+  border-radius: 16px;
+  padding: 32px 40px;
+  min-width: 280px;
+  box-shadow: 0 0 48px rgba(124, 77, 255, 0.35);
+}
+.fhplay-again-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid;
+}
+.fhplay-again-row.ready  { border-color: #4caf50; background: rgba(76, 175, 80, 0.12); }
+.fhplay-again-row.waiting{ border-color: #444;    background: rgba(255,255,255,0.03); }
+.fhplay-again-icon  { font-size: 18px; }
+.fhplay-again-name  { flex: 1; font-weight: bold; }
+.fhplay-again-status{ font-size: 12px; opacity: 0.65; }
+
 /* ── Observer modal (other players) ─────────────────────────────────────────── */
 @keyframes fh-observer-pulse {
   0%, 100% { opacity: 0.9; }

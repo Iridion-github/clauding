@@ -279,6 +279,34 @@ function startNextRound(state) {
   }
 }
 
+function resetGame(state) {
+  const deck = buildDeck();
+  shuffle(deck);
+
+  state.drawPile          = deck;
+  state.round             = 1;
+  state.phase             = 'playing';
+  state.pendingAction     = null;
+  state.secondChanceEvent = null;
+  state.winner            = null;
+  state.log               = [];
+
+  for (const pid of state.playerOrder) {
+    const p = state.players[pid];
+    p.cards         = [];
+    p.status        = 'active';
+    p.secondChances = 0;
+    p.roundScore    = null;
+    p.totalScore    = 0;
+  }
+
+  state.dealQueue = [...state.playerOrder];
+  continueDeal(state);
+  if (!state.pendingAction) {
+    state.activePlayerId = nextActive(state, null);
+  }
+}
+
 function replenish(state) {
   const fresh = buildDeck();
   shuffle(fresh);
@@ -293,5 +321,5 @@ function log(state, msg) {
 module.exports = {
   createGame, drawAndProcess, continueDeal,
   resolveFreeze, resolveFlipThree,
-  nextActive, allDone, endRound, startNextRound, calcScore,
+  nextActive, allDone, endRound, startNextRound, calcScore, resetGame,
 };

@@ -20,10 +20,15 @@ const MAIN_PHASE_CLASS = {
   busting:   'fhanim-busting',
 };
 
-export function CardDrawAnimation({ card, isBust, secondChanceCard, onDone }) {
+export function CardDrawAnimation({ card, isBust, isFlippingHusks, secondChanceCard, onDone }) {
   const [phase, setPhase] = useState('falling');
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
+
+  useEffect(() => {
+    const audio = new Audio('/sounds/card-flipping.mp3');
+    audio.play().catch(() => {});
+  }, []);
 
   useEffect(() => {
     const t = [
@@ -31,11 +36,20 @@ export function CardDrawAnimation({ card, isBust, secondChanceCard, onDone }) {
       setTimeout(() => setPhase('flip-in'),  1400),
       setTimeout(() => setPhase('revealed'), 1750),
       setTimeout(() => {
-        if (isBust)             setPhase('busting');
-        else if (secondChanceCard) setPhase('sc-show');
-        else                    onDoneRef.current();
+        if (isBust) {
+          setPhase('busting');
+          new Audio('/sounds/busted.mp3').play().catch(() => {});
+        } else if (secondChanceCard) {
+          setPhase('sc-show');
+        } else {
+          onDoneRef.current();
+        }
       }, 2000),
     ];
+    if (card.type === 'freeze')    t.push(setTimeout(() => new Audio('/sounds/freeze.mp3').play().catch(() => {}), 1750));
+    if (card.type === 'flip_three')   t.push(setTimeout(() => new Audio('/sounds/triple.mp3').play().catch(() => {}), 1750));
+    if (card.type === 'second_chance') t.push(setTimeout(() => new Audio('/sounds/2nd-chance.mp3').play().catch(() => {}), 1750));
+    if (isFlippingHusks) t.push(setTimeout(() => new Audio('/sounds/7-unique-numbers.mp3').play().catch(() => {}), 1750));
     if (isBust)          t.push(setTimeout(() => onDoneRef.current(), 4000));
     if (secondChanceCard) {
       t.push(setTimeout(() => setPhase('sc-exit'), 4000));

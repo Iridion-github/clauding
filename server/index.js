@@ -6,7 +6,7 @@ const path = require('path');
 const { createGameState } = require('./game/GameState');
 const { applyAction } = require('./game/GameEngine');
 const { buildDeck } = require('./game/Cards');
-const { createGame: createFlippingHusksGame } = require('./flippinghusks/GameState');
+const { createGame: createFlippingHusksGame, resetGame: resetFlippingHusksGame } = require('./flippinghusks/GameState');
 const { applyAction: applyFlippingHusksAction } = require('./flippinghusks/GameEngine');
 
 const app = express();
@@ -109,7 +109,7 @@ fh.on('connection', (socket) => {
 
   socket.on('fh_join', ({ roomId, playerName }) => {
     if (!fhRooms[roomId]) {
-      fhRooms[roomId] = { hostId: socket.id, players: [], state: null };
+      fhRooms[roomId] = { hostId: socket.id, players: [], state: null, playAgainVotes: new Set() };
     }
     const room = fhRooms[roomId];
 
@@ -151,12 +151,33 @@ fh.on('connection', (socket) => {
     fh.to(meta.roomId).emit('fh_state_update', { state: room.state });
   });
 
+  socket.on('fh_play_again', () => {
+    const meta = fhSocketToRoom[socket.id];
+    if (!meta) return;
+    const room = fhRooms[meta.roomId];
+    if (!room?.state || room.state.phase !== 'finished') return;
+
+    room.playAgainVotes.add(meta.playerId);
+
+    fh.to(meta.roomId).emit('fh_play_again_update', {
+      votes: [...room.playAgainVotes],
+      players: room.players.map(p => ({ id: p.id, name: p.name })),
+    });
+
+    if (room.playAgainVotes.size >= room.players.length) {
+      room.playAgainVotes.clear();
+      resetFlippingHusksGame(room.state);
+      fh.to(meta.roomId).emit('fh_state_update', { state: room.state });
+    }
+  });
+
   socket.on('disconnect', () => {
     const meta = fhSocketToRoom[socket.id];
     if (meta) {
       const room = fhRooms[meta.roomId];
       if (room) {
         room.players = room.players.filter(p => p.socketId !== socket.id);
+        room.playAgainVotes.delete(meta.playerId);
         fh.to(meta.roomId).emit('fh_player_left', { playerId: meta.playerId });
         if (room.players.length === 0) delete fhRooms[meta.roomId];
       }

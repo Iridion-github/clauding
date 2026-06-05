@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useFlippingHusks } from '../hooks/useFlippingHusks';
 import { FlippingHusksLobby } from '../components/flippinghusks/FlippingHusksLobby';
 import { FlippingHusksBoard } from '../components/flippinghusks/FlippingHusksBoard';
@@ -13,8 +13,15 @@ export function FlippingHusksApp() {
     isMyTurn, self,
     error, actionError,
     drawnCardAnim, clearDrawnCardAnim,
+    playAgainVotes, votePlayAgain,
     joinRoom, startGame, sendAction,
   } = useFlippingHusks();
+
+  useEffect(() => {
+    if (gameState?.phase === 'finished') {
+      new Audio('/sounds/victory.mp3').play().catch(() => {});
+    }
+  }, [gameState?.phase]);
 
   function handleJoin(roomId, name) {
     setCurrentRoomId(roomId);
@@ -66,12 +73,15 @@ export function FlippingHusksApp() {
           isMyTurn={isMyTurn}
           actionError={actionError}
           sendAction={sendAction}
+          playAgainVotes={playAgainVotes}
+          votePlayAgain={votePlayAgain}
         />
         {drawnCardAnim && (
           <CardDrawAnimation
             key={drawnCardAnim.card.id}
             card={drawnCardAnim.card}
             isBust={drawnCardAnim.isBust}
+            isFlippingHusks={drawnCardAnim.isFlippingHusks ?? false}
             secondChanceCard={drawnCardAnim.secondChanceCard ?? null}
             onDone={clearDrawnCardAnim}
           />

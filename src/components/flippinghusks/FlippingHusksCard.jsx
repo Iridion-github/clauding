@@ -1,137 +1,287 @@
+import { useId } from 'react';
 import './FlippingHusksCard.css';
 
-// Number card styles: background gradient, text color, glow color, pip symbol
-const NUMBER_STYLES = [
-  { bg: 'linear-gradient(160deg,#1a4a8a,#0d2f5c)', text: '#cce4ff', glow: '#1565c0', sym: '◆', riskColor: '#64b5f6' }, // 0
-  { bg: 'linear-gradient(160deg,#1565c0,#0d47a1)', text: '#ddeeff', glow: '#1976d2', sym: '◆', riskColor: '#64b5f6' }, // 1
-  { bg: 'linear-gradient(160deg,#00695c,#004d40)', text: '#b2dfdb', glow: '#00796b', sym: '◈', riskColor: '#4db6ac' }, // 2
-  { bg: 'linear-gradient(160deg,#2e7d32,#1b5e20)', text: '#c8e6c9', glow: '#388e3c', sym: '◈', riskColor: '#81c784' }, // 3
-  { bg: 'linear-gradient(160deg,#558b2f,#33691e)', text: '#dcedc8', glow: '#689f38', sym: '◉', riskColor: '#aed581' }, // 4
-  { bg: 'linear-gradient(160deg,#9e6c00,#795500)', text: '#fff9c4', glow: '#f9a825', sym: '◉', riskColor: '#fff176' }, // 5
-  { bg: 'linear-gradient(160deg,#b35000,#8c3400)', text: '#ffe0b2', glow: '#f57f17', sym: '▲', riskColor: '#ffb74d' }, // 6
-  { bg: 'linear-gradient(160deg,#c84000,#9a2c00)', text: '#ffd0b0', glow: '#e65100', sym: '▲', riskColor: '#ff8a65' }, // 7
-  { bg: 'linear-gradient(160deg,#b71c1c,#8b0000)', text: '#ffcdd2', glow: '#c62828', sym: '⬥', riskColor: '#ef9a9a' }, // 8
-  { bg: 'linear-gradient(160deg,#a01515,#720000)', text: '#ffcdd2', glow: '#b71c1c', sym: '⬥', riskColor: '#e57373' }, // 9
-  { bg: 'linear-gradient(160deg,#880e4f,#5c0035)', text: '#f8bbd0', glow: '#ad1457', sym: '★', riskColor: '#f48fb1' }, // 10
-  { bg: 'linear-gradient(160deg,#6a1b9a,#4a0072)', text: '#e1bee7', glow: '#7b1fa2', sym: '★', riskColor: '#ce93d8' }, // 11
-  { bg: 'linear-gradient(160deg,#4a148c,#2a0060)', text: '#e8d5ff', glow: '#6a1b9a', sym: '✦', riskColor: '#b39ddb' }, // 12
-];
-
-const SPECIAL_STYLES = {
-  modifier:      { bg: 'linear-gradient(160deg,#00838f,#005662)', text: '#e0f7fa', glow: '#0097a7', sym: '+', icon: null },
-  multiplier:    { bg: 'linear-gradient(160deg,#bf360c,#870000)', text: '#fff8e1', glow: '#e64a19', sym: '×', icon: '×2' },
-  freeze:        { bg: 'linear-gradient(160deg,#0277bd,#01579b)', text: '#e1f5fe', glow: '#039be5', sym: '❄', icon: '❄' },
-  flip_three:    { bg: 'linear-gradient(160deg,#6a1b9a,#38006b)', text: '#f3e5f5', glow: '#8e24aa', sym: '↺', icon: '↺' },
-  second_chance: { bg: 'linear-gradient(160deg,#1b5e20,#0a3d12)', text: '#e8f5e9', glow: '#2e7d32', sym: '★', icon: '★' },
-};
-
-const RISK_LABELS = ['SAFE','SAFE','LOW','LOW','LOW','MED','MED','HIGH','HIGH','HIGH','MAX','MAX','MAX'];
-const DECK_COUNTS = [1,1,2,3,4,5,6,7,8,9,10,11,12];
+const VINE = [null,'#9e9e9e','#aed136','#e91e63','#26c6da','#00897b','#6a1b9a','#8d6e63','#43a047','#f57c00','#c62828','#1565c0','#455a64'];
+const WORDS = ['ZERO','ONE','TWO','THREE','FOUR','FIVE','SIX','SEVEN','EIGHT','NINE','TEN','ELEVEN','TWELVE'];
+const RAINBOW_STOPS = ['#ff3333','#ff9900','#ffee00','#33cc33','#3399ff','#cc33ff','#ff3399'];
 
 export function FlippingHusksCard({ card, faceDown = false, small = false, highlight = false }) {
   if (!card) return null;
-
-  if (faceDown) {
-    return (
-      <div className={`fhcard fhcard-back${small ? ' fhcard-small' : ''}`}>
-        <div className="fhcard-back-pattern" />
-      </div>
-    );
-  }
-
+  if (faceDown) return <CardBack small={small} />;
   if (card.type === 'number') return <NumberCard card={card} small={small} highlight={highlight} />;
-  return <SpecialCard card={card} small={small} highlight={highlight} />;
+  if (card.type === 'modifier' || card.type === 'multiplier') return <ScoreCard card={card} small={small} highlight={highlight} />;
+  return <ActionCard card={card} small={small} highlight={highlight} />;
 }
+
+// ─── Card Back ─────────────────────────────────────────────────────────────────
+
+function CardBack({ small }) {
+  return (
+    <div className={`fhcard fhcard-back${small ? ' fhcard-small' : ''}`}>
+      <div className="fhback-inner">
+        <span className="fhback-line">FLIPPING</span>
+        <span className="fhback-line">HUSKS</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Number Card ───────────────────────────────────────────────────────────────
 
 function NumberCard({ card, small, highlight }) {
-  const s = NUMBER_STYLES[card.value] ?? NUMBER_STYLES[12];
-  const riskPct = Math.round((card.value / 12) * 100);
-  const count = DECK_COUNTS[card.value];
-
+  const isRainbow = card.value === 0;
+  const vine = VINE[card.value] ?? '#888';
   return (
     <div
-      className={`fhcard${small ? ' fhcard-small' : ''}${highlight ? ' fhcard-highlight' : ''}`}
-      style={{ background: s.bg, color: s.text, boxShadow: `0 6px 20px ${s.glow}66` }}
+      className={`fhcard fhcard-number${small ? ' fhcard-small' : ''}${highlight ? ' fhcard-highlight' : ''}`}
+      style={{ '--vine': vine }}
     >
-      <div className="fhcard-pip fhcard-pip-tl">
-        <div className="fhcard-pip-val">{card.label}</div>
-        <div className="fhcard-pip-sym">{s.sym}</div>
+      <VineBorder vine={vine} isRainbow={isRainbow} />
+      <div className="fhcard-nbody">
+        <BigNum value={String(card.value)} vine={vine} isRainbow={isRainbow} big />
       </div>
-
-      <div className="fhcard-center">
-        <div className="fhcard-watermark">◆</div>
-        <div className="fhcard-main-value">{card.label}</div>
-        <div className="fhcard-sub">{RISK_LABELS[card.value]} RISK</div>
-        <div className="fhcard-risk-bar-wrap">
-          <div
-            className="fhcard-risk-bar-fill"
-            style={{ width: `${riskPct}%`, background: s.riskColor }}
-          />
+      {!small && (
+        <div className="fhcard-wordbox">
+          <span className="fhcard-word">{WORDS[card.value]}</span>
         </div>
-        <div className="fhcard-deck-count">×{count} in deck</div>
-      </div>
+      )}
+    </div>
+  );
+}
 
-      <div className="fhcard-pip fhcard-pip-br">
-        <div className="fhcard-pip-val">{card.label}</div>
-        <div className="fhcard-pip-sym">{s.sym}</div>
+// ─── Score Card (+2…+10, ×2) ───────────────────────────────────────────────────
+
+function ScoreCard({ card, small, highlight }) {
+  const label = card.type === 'multiplier' ? '×2' : card.label;
+  return (
+    <div className={`fhcard fhcard-score${small ? ' fhcard-small' : ''}${highlight ? ' fhcard-highlight' : ''}`}>
+      <VineBorder vine="#cc2200" isRainbow={false} outlineColor="#ffffff" />
+      <div className="fhcard-nbody">
+        <BigNum value={label} vine="#cc2200" isRainbow={false} />
       </div>
     </div>
   );
 }
 
-function SpecialCard({ card, small, highlight }) {
-  const s = SPECIAL_STYLES[card.type] ?? { bg: '#333', text: '#fff', glow: '#555', sym: '?', icon: '?' };
-  const isModifier = card.type === 'modifier';
-  const label = specialLabel(card);
-  const sub   = specialSub(card);
+// ─── Action Card ───────────────────────────────────────────────────────────────
 
+function ActionCard({ card, small, highlight }) {
+  const typeSlug = card.type.replace(/_/g, '-');
+  const lines = actionLines(card.type);
   return (
-    <div
-      className={`fhcard${small ? ' fhcard-small' : ''}${highlight ? ' fhcard-highlight' : ''}`}
-      style={{ background: s.bg, color: s.text, boxShadow: `0 6px 20px ${s.glow}66` }}
-    >
-      <div className="fhcard-pip fhcard-pip-tl">
-        <div className="fhcard-pip-val">{isModifier ? card.label : s.sym}</div>
-        <div className="fhcard-pip-sym">{card.type === 'second_chance' ? 'SC' : card.type === 'flip_three' ? 'F3' : card.type.slice(0,2).toUpperCase()}</div>
-      </div>
-
-      <div className="fhcard-center">
-        <div className="fhcard-watermark">{s.sym}</div>
-        {s.icon && <div className="fhcard-icon">{isModifier ? null : s.icon}</div>}
-        <div className="fhcard-main-value" style={{ fontSize: isModifier ? '44px' : '36px', letterSpacing: 0 }}>
-          {label}
-        </div>
-        {sub && <div className="fhcard-sub">{sub}</div>}
-      </div>
-
-      <div className="fhcard-pip fhcard-pip-br">
-        <div className="fhcard-pip-val">{isModifier ? card.label : s.sym}</div>
-        <div className="fhcard-pip-sym">{card.type === 'second_chance' ? 'SC' : card.type === 'flip_three' ? 'F3' : card.type.slice(0,2).toUpperCase()}</div>
+    <div className={`fhcard fhcard-action fhac-${typeSlug}${small ? ' fhcard-small' : ''}${highlight ? ' fhcard-highlight' : ''}`}>
+      {card.type === 'flip_three'    && <FlipThreeDeco />}
+      {card.type === 'freeze'        && <FreezeDeco />}
+      {card.type === 'second_chance' && <HeartsDeco />}
+      <div className="fhcard-drapes">
+        {lines.map((line, i) => (
+          <div key={i} className="fhcard-drape">
+            <span className="fhcard-drape-text">{line}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
-function specialLabel(card) {
-  switch (card.type) {
-    case 'modifier':      return card.label;
-    case 'multiplier':    return '×2';
-    case 'freeze':        return '❄';
-    case 'flip_three':    return '↺3';
-    case 'second_chance': return '★';
-    default:              return '?';
-  }
+function actionLines(type) {
+  if (type === 'flip_three') return ['FLIP', 'THREE'];
+  if (type === 'freeze') return ['FREEZE'];
+  if (type === 'second_chance') return ['SECOND', 'CHANCE'];
+  return [type.toUpperCase()];
 }
 
-function specialSub(card) {
-  switch (card.type) {
-    case 'modifier':      return 'BONUS';
-    case 'multiplier':    return 'DOUBLE';
-    case 'freeze':        return 'FREEZE';
-    case 'flip_three':    return 'FLIP 3';
-    case 'second_chance': return '2ND CHANCE';
-    default:              return '';
-  }
+// ─── Vine Border SVG ───────────────────────────────────────────────────────────
+
+// Mayan crenellated inner boundary (5 teeth on top/bottom, 8 on left/right).
+// Outer rounded rect + this inner stepped path → frame with Mayan zigzag inner edge.
+// Unit = 20px, tooth = 12px wide × 6px deep, gap = 8px.  Card 140×200, outer at y=4/x=4.
+const MAYAN_INNER = [
+  'M120,10',
+  // top edge — going LEFT, baseline y=10, teeth DOWN to y=14
+  'L112,10 L112,14 L100,14 L100,10',
+  'L92,10 L92,14 L80,14 L80,10',
+  'L72,10 L72,14 L60,14 L60,10',
+  'L52,10 L52,14 L40,14 L40,10',
+  'L32,10 L32,14 L20,14 L20,10',
+  // top-left corner step
+  'L10,10 L10,20',
+  // left edge — going DOWN, baseline x=10, teeth RIGHT to x=14
+  'L10,28 L14,28 L14,40 L10,40',
+  'L10,48 L14,48 L14,60 L10,60',
+  'L10,68 L14,68 L14,80 L10,80',
+  'L10,88 L14,88 L14,100 L10,100',
+  'L10,108 L14,108 L14,120 L10,120',
+  'L10,128 L14,128 L14,140 L10,140',
+  'L10,148 L14,148 L14,160 L10,160',
+  'L10,168 L14,168 L14,180 L10,180',
+  // bottom-left corner step
+  'L10,190 L20,190',
+  // bottom edge — going RIGHT, baseline y=190, teeth UP to y=186
+  'L28,190 L28,186 L40,186 L40,190',
+  'L48,190 L48,186 L60,186 L60,190',
+  'L68,190 L68,186 L80,186 L80,190',
+  'L88,190 L88,186 L100,186 L100,190',
+  'L108,190 L108,186 L120,186 L120,190',
+  // bottom-right corner step
+  'L130,190 L130,180',
+  // right edge — going UP, baseline x=130, teeth LEFT to x=126
+  'L130,172 L126,172 L126,160 L130,160',
+  'L130,152 L126,152 L126,140 L130,140',
+  'L130,132 L126,132 L126,120 L130,120',
+  'L130,112 L126,112 L126,100 L130,100',
+  'L130,92 L126,92 L126,80 L130,80',
+  'L130,72 L126,72 L126,60 L130,60',
+  'L130,52 L126,52 L126,40 L130,40',
+  'L130,32 L126,32 L126,20 L130,20',
+  // top-right corner step back to start
+  'L130,10 L120,10 Z',
+].join(' ');
+
+function VineBorder({ vine, isRainbow, outlineColor }) {
+  const uid = useId().replace(/:/g, '');
+  const gid = `fhvg${uid}`;
+  const outerPath = rrCW(4, 4, 132, 192, 10); // rounded outer boundary
+  const fill = isRainbow ? `url(#${gid})` : vine;
+  const sw = outlineColor ? 1.5 : 0;
+  const stroke = outlineColor ?? 'none';
+
+  return (
+    <svg className="fhcard-vine" viewBox="0 0 140 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      {isRainbow && (
+        <defs>
+          <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+            {RAINBOW_STOPS.map((c, i) => (
+              <stop key={i} offset={`${Math.round(i / (RAINBOW_STOPS.length - 1) * 100)}%`} stopColor={c} />
+            ))}
+          </linearGradient>
+        </defs>
+      )}
+      <path
+        d={`${outerPath} ${MAYAN_INNER}`}
+        fill={fill}
+        fillRule="evenodd"
+        stroke={stroke}
+        strokeWidth={sw}
+      />
+    </svg>
+  );
 }
 
-export { NUMBER_STYLES, SPECIAL_STYLES };
+function rrCW(x, y, w, h, r) {
+  return `M${x+r},${y} L${x+w-r},${y} Q${x+w},${y} ${x+w},${y+r} L${x+w},${y+h-r} Q${x+w},${y+h} ${x+w-r},${y+h} L${x+r},${y+h} Q${x},${y+h} ${x},${y+h-r} L${x},${y+r} Q${x},${y} ${x+r},${y} Z`;
+}
+
+function rrCCW(x, y, w, h, r) {
+  return `M${x+r},${y} Q${x},${y} ${x},${y+r} L${x},${y+h-r} Q${x},${y+h} ${x+r},${y+h} L${x+w-r},${y+h} Q${x+w},${y+h} ${x+w},${y+h-r} L${x+w},${y+r} Q${x+w},${y} ${x+w-r},${y} Z`;
+}
+
+// ─── Double-outlined number ─────────────────────────────────────────────────────
+
+function BigNum({ value, vine, isRainbow, big }) {
+  return (
+    <div
+      className={`fhcard-bignum${isRainbow ? ' fhcard-bignum-rb' : ''}${big ? ' fhcard-bignum-big' : ''}`}
+      style={{ '--vine': vine }}
+    >
+      <span className="fhbn-outer" aria-hidden="true">{value}</span>
+      <span className="fhbn-face">{value}</span>
+    </div>
+  );
+}
+
+// ─── Flip Three decoration ──────────────────────────────────────────────────────
+
+function FlipThreeDeco() {
+  return (
+    <svg className="fhcard-deco" viewBox="0 0 140 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <g opacity="0.78">
+        <rect x="28" y="20" width="42" height="60" rx="5"
+          fill="rgba(255,255,255,0.88)" stroke="#8a9200" strokeWidth="2"
+          transform="rotate(-24,49,50)" />
+        <rect x="70" y="20" width="42" height="60" rx="5"
+          fill="rgba(255,255,255,0.88)" stroke="#8a9200" strokeWidth="2"
+          transform="rotate(24,91,50)" />
+        <rect x="49" y="16" width="42" height="60" rx="5"
+          fill="rgba(255,255,255,0.94)" stroke="#8a9200" strokeWidth="2" />
+      </g>
+      <path d="M 86,88 L 71,118 L 82,118 L 64,152 L 100,110 L 86,110 Z"
+        fill="#fff" stroke="#555500" strokeWidth="1.5" opacity="0.9" />
+    </svg>
+  );
+}
+
+// ─── Freeze decoration ──────────────────────────────────────────────────────────
+
+// [x, y, radius, rotation°, opacity] — scattered across the 140×200 viewBox
+const ICE_FLAKES = [
+  [12, 14,  7, 15, 0.80], [70,  10,  9, 30, 0.75], [128, 20,  6, 45, 0.70],
+  [35, 38,  5,  0, 0.65], [100, 33,  7, 20, 0.70], [18,  66,  8, 10, 0.72],
+  [120, 60, 5, 50, 0.60], [55,  52,  4, 35, 0.50], [92,  78,  6, 25, 0.65],
+  [15, 108, 5, 40, 0.70], [130,103,  6, 15, 0.65], [44,  90,  4, 55, 0.55],
+  [75,  42, 3, 10, 0.50], [6,  170,  5,  5, 0.65], [52, 163,  7, 20, 0.70],
+  [112,148, 5, 40, 0.65], [20, 155,  6,  5, 0.70], [126,176,  7, 30, 0.75],
+  [70, 180, 5, 50, 0.60], [34, 188,  4, 25, 0.55], [100,186,  5, 45, 0.60],
+  [8,  42,  4, 55, 0.60], [135,142,  4, 20, 0.55], [107,112,  4, 15, 0.50],
+  [26, 132, 5, 35, 0.60], [80, 172,  3, 10, 0.45], [48,  18,  4, 50, 0.60],
+  [96,   8, 5, 35, 0.65], [134, 90,  3, 25, 0.50], [5,  188,  4, 10, 0.55],
+];
+
+function IceCrystal({ x, y, r, rot, op }) {
+  const sw = Math.max(0.5, r * 0.16);
+  const b  = r * 0.65;
+  const bn = r * 0.22;
+  return (
+    <g transform={`translate(${x},${y}) rotate(${rot})`}
+       stroke="#fff" strokeWidth={sw} strokeLinecap="round" opacity={op}>
+      <line x1="0" y1={-r} x2="0" y2={r} />
+      <line x1={-r*0.866} y1={-r*0.5} x2={r*0.866} y2={r*0.5} />
+      <line x1={-r*0.866} y1={r*0.5}  x2={r*0.866} y2={-r*0.5} />
+      {r >= 5 && <>
+        <line x1="0" y1={-b} x2={ bn} y2={-b+bn} />
+        <line x1="0" y1={-b} x2={-bn} y2={-b+bn} />
+        <line x1="0" y1={ b} x2={ bn} y2={ b-bn} />
+        <line x1="0" y1={ b} x2={-bn} y2={ b-bn} />
+      </>}
+    </g>
+  );
+}
+
+function FreezeDeco() {
+  return (
+    <svg className="fhcard-deco" viewBox="0 0 140 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      {ICE_FLAKES.map(([x, y, r, rot, op], i) => (
+        <IceCrystal key={i} x={x} y={y} r={r} rot={rot} op={op} />
+      ))}
+      <g transform="translate(70,128)" opacity="0.88">
+        <path d="M-15,-10 Q-15,-28 0,-28 Q15,-28 15,-10"
+          fill="none" stroke="#fff" strokeWidth="5.5" strokeLinecap="round" />
+        <rect x="-20" y="-10" width="40" height="30" rx="5" fill="#fff" />
+        <circle cx="0" cy="9" r="5.5" fill="#1565c0" />
+        <rect x="-3" y="9" width="6" height="9" rx="2.5" fill="#1565c0" />
+      </g>
+    </svg>
+  );
+}
+
+// ─── Second Chance decoration ───────────────────────────────────────────────────
+
+const HEART_PATH = 'M50,96 C20,78 0,56 0,30 C0,12 14,2 30,2 C40,2 48,7 50,15 C52,7 60,2 70,2 C86,2 100,12 100,30 C100,56 80,78 50,96Z';
+
+function Heart({ cx, cy, s, fill, opacity }) {
+  return (
+    <g transform={`translate(${cx - s / 2},${cy - s / 2}) scale(${s / 100})`} opacity={opacity}>
+      <path d={HEART_PATH} fill={fill} />
+    </g>
+  );
+}
+
+function HeartsDeco() {
+  return (
+    <svg className="fhcard-deco" viewBox="0 0 140 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <Heart cx={70} cy={48} s={62} fill="#ff6b6b" opacity={0.85} />
+      <Heart cx={34} cy={104} s={40} fill="#ff8888" opacity={0.6} />
+      <Heart cx={106} cy={104} s={40} fill="#ff8888" opacity={0.6} />
+    </svg>
+  );
+}

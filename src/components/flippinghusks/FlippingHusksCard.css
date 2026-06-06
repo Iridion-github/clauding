@@ -1,9 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Cinzel:wght@400;700&display=swap');
+
 /* ── Base card ─────────────────────────────────────────────────────────────── */
 .fhcard {
   width: 140px;
   height: 200px;
   border-radius: 14px;
-  border: 2px solid rgba(255,255,255,0.22);
+  border: 2px solid rgba(0,0,0,0.12);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -13,17 +15,12 @@
   cursor: default;
   transition: transform 0.15s, box-shadow 0.15s;
   font-family: 'Georgia', serif;
+  box-sizing: border-box;
 }
 
 .fhcard:hover { transform: translateY(-5px); }
 
-.fhcard.fhcard-highlight {
-  outline: 3px solid #f0c040;
-  outline-offset: 2px;
-  box-shadow: 0 0 18px rgba(240,192,64,0.55) !important;
-}
-
-/* ── Small variant (opponent cards) ────────────────────────────────────────── */
+/* ── Small variant ───────────────────────────────────────────────────────────── */
 .fhcard-small {
   width: 72px;
   height: 104px;
@@ -32,145 +29,250 @@
 }
 .fhcard-small:hover { transform: translateY(-3px); }
 
-/* ── Face-down back ─────────────────────────────────────────────────────────── */
+/* ── Highlight ───────────────────────────────────────────────────────────────── */
+.fhcard-highlight {
+  outline: 3px solid #f0c040;
+  outline-offset: 2px;
+  box-shadow: 0 0 20px rgba(240,192,64,0.6) !important;
+}
+
+/* ── Card Back ───────────────────────────────────────────────────────────────── */
 .fhcard-back {
-  background: #1a1a2e;
-  border: 2px solid #3a3a6a;
-}
-.fhcard-back-pattern {
-  width: 100%;
-  height: 100%;
-  background:
-    repeating-linear-gradient(
-      45deg,
-      #2a2a5a 0px, #2a2a5a 3px,
-      #1a1a3a 3px, #1a1a3a 9px
-    );
-  border-radius: 12px;
-  opacity: 0.85;
+  background: linear-gradient(140deg, #00c4c4 0%, #008b8e 50%, #005860 100%);
+  border: 3px solid #1a004a;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.75), inset 0 0 32px rgba(0,0,0,0.22);
 }
 
-/* ── Inner decorative frame ─────────────────────────────────────────────────── */
-.fhcard::after {
-  content: '';
-  position: absolute;
-  inset: 4px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.1);
-  pointer-events: none;
-}
-.fhcard-small::after { inset: 3px; border-radius: 6px; }
-
-/* ── Pip sections (top and bottom bands) ────────────────────────────────────── */
-.fhcard-pip {
-  display: flex;
-  flex-direction: column;
-  padding: 7px 9px;
-  line-height: 1;
-  background: rgba(0,0,0,0.18);
-  flex-shrink: 0;
-}
-.fhcard-pip-br { align-items: flex-end; margin-top: auto; transform: rotate(180deg); }
-
-.fhcard-pip-val {
-  font-size: 17px;
-  font-weight: bold;
-  letter-spacing: -1px;
-}
-.fhcard-pip-sym {
-  font-size: 11px;
-  opacity: 0.75;
-  margin-top: 1px;
-}
-
-.fhcard-small .fhcard-pip      { padding: 4px 5px; }
-.fhcard-small .fhcard-pip-val  { font-size: 11px; }
-.fhcard-small .fhcard-pip-sym  { font-size: 8px; }
-
-/* ── Center content ─────────────────────────────────────────────────────────── */
-.fhcard-center {
+.fhback-inner {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 4px 6px;
-  position: relative;
+  gap: 2px;
 }
 
-.fhcard-icon {
+.fhback-line {
+  font-family: 'Bangers', cursive;
   font-size: 26px;
-  line-height: 1;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+  font-weight: 400;
+  letter-spacing: 1px;
+  color: #FFD700;
+  text-shadow: 0 0 16px rgba(255,215,0,0.55), 0 2px 5px rgba(0,0,0,0.65);
+  line-height: 1.1;
 }
-.fhcard-small .fhcard-icon { font-size: 16px; }
 
-.fhcard-main-value {
-  font-size: 52px;
-  font-weight: bold;
-  line-height: 1;
-  letter-spacing: -2px;
-  text-shadow: 0 2px 6px rgba(0,0,0,0.35);
-}
-.fhcard-small .fhcard-main-value { font-size: 26px; letter-spacing: -1px; }
+.fhcard-small .fhback-line { font-size: 11px; letter-spacing: 0.5px; }
 
-.fhcard-sub {
-  font-size: 9px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  opacity: 0.65;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
+/* ── Number card ─────────────────────────────────────────────────────────────── */
+.fhcard-number {
+  background: #fffde7;
+  padding: 18px 18px 0;
 }
-.fhcard-small .fhcard-sub { display: none; }
 
-.fhcard-label {
-  font-size: 13px;
-  font-weight: bold;
-  letter-spacing: 0.5px;
-  text-align: center;
-  line-height: 1.2;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
-  white-space: nowrap;
+/* ── Score card (modifier / multiplier) ──────────────────────────────────────── */
+.fhcard-score {
+  background:
+    /* diagonal specular shine band */
+    linear-gradient(
+      108deg,
+      transparent 20%,
+      rgba(255, 255, 210, 0.55) 35%,
+      rgba(255, 255, 220, 0.55) 50%,
+      transparent 65%
+    ),
+    /* metallic gold base — alternating highlight / shadow bands */
+    linear-gradient(
+      160deg,
+      #ffe566 0%,
+      #daa520 18%,
+      #ffd700 36%,
+      #b8860b 52%,
+      #e8b800 68%,
+      #ffd700 82%,
+      #c89010 100%
+    );
+  border: 2px solid rgba(255, 220, 60, 0.75);
+  box-shadow:
+    inset 0 2px 5px rgba(255, 255, 180, 0.7),
+    inset 0 -2px 4px rgba(100, 60, 0, 0.45),
+    0 4px 18px rgba(180, 130, 0, 0.4);
+  padding: 18px;
 }
-.fhcard-small .fhcard-label { font-size: 7px; letter-spacing: 0; }
 
-/* ── Risk bar (number cards only) ───────────────────────────────────────────── */
-.fhcard-risk-bar-wrap {
-  width: 80%;
-  height: 5px;
-  background: rgba(0,0,0,0.25);
-  border-radius: 3px;
-  overflow: hidden;
-  margin-top: 2px;
+/* ── Action cards ────────────────────────────────────────────────────────────── */
+.fhcard-action {
+  border: 2px solid rgba(0,0,0,0.18);
 }
-.fhcard-risk-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.3s;
-}
-.fhcard-small .fhcard-risk-bar-wrap { display: none; }
 
-/* ── Deck count badge ───────────────────────────────────────────────────────── */
-.fhcard-deck-count {
-  font-size: 8px;
-  opacity: 0.55;
-  letter-spacing: 0.5px;
+.fhac-flip-three    { background: linear-gradient(135deg, #ffff99 0%, #eeff00 55%, #c2cc00 100%); }
+.fhac-freeze {
+  background:
+    radial-gradient(ellipse 55% 30% at 15% 18%, rgba(200,230,255,0.30) 0%, transparent 100%),
+    radial-gradient(ellipse 40% 25% at 85% 10%, rgba(200,230,255,0.22) 0%, transparent 100%),
+    radial-gradient(ellipse 50% 35% at 62% 80%, rgba(200,230,255,0.22) 0%, transparent 100%),
+    radial-gradient(ellipse 35% 22% at  3% 93%, rgba(200,230,255,0.28) 0%, transparent 100%),
+    radial-gradient(ellipse 42% 28% at 97% 87%, rgba(200,230,255,0.24) 0%, transparent 100%),
+    linear-gradient(145deg, #42a5f5 0%, #1565c0 52%, #0d47a1 100%);
 }
-.fhcard-small .fhcard-deck-count { display: none; }
+.fhac-second-chance { background: linear-gradient(140deg, #d32f2f 0%, #8b0000 100%); }
 
-/* ── Watermark diamond ──────────────────────────────────────────────────────── */
-.fhcard-watermark {
+/* ── Vine SVG (absolute overlay for number & score cards) ─────────────────────── */
+.fhcard-vine {
   position: absolute;
-  font-size: 80px;
-  opacity: 0.05;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  line-height: 1;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  z-index: 1;
 }
-.fhcard-small .fhcard-watermark { display: none; }
+
+/* ── Number body (flex: 1 centred area, above vine) ──────────────────────────── */
+.fhcard-nbody {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Word box (bottom label on number cards) ──────────────────────────────────── */
+.fhcard-wordbox {
+  position: relative;
+  z-index: 2;
+  margin: 0 4px 18px;
+  background: rgba(255,255,255,0.88);
+  border-radius: 4px;
+  padding: 2px 4px;
+  text-align: center;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.08);
+}
+
+.fhcard-word {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #333;
+}
+
+/* ── Double-outlined big number ───────────────────────────────────────────────── */
+.fhcard-bignum {
+  display: block;
+  width: 100%;
+  position: relative;
+  line-height: 1;
+}
+
+.fhbn-outer,
+.fhbn-face {
+  font-size: 62px;
+  font-weight: 400;
+  font-family: 'Cinzel', 'Palatino Linotype', 'Book Antiqua', 'Georgia', serif;
+  line-height: 1;
+  text-align: center;
+  display: block;
+  width: 100%;
+}
+
+.fhbn-outer {
+  -webkit-text-stroke: 6px #111;
+  color: #111;
+  paint-order: stroke fill;
+}
+
+.fhbn-face {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  -webkit-text-stroke: 3px var(--vine, #888);
+  color: var(--vine, #888);
+  paint-order: stroke fill;
+}
+
+/* Bigger number on normal cards (0-12) */
+.fhcard-bignum-big .fhbn-outer,
+.fhcard-bignum-big .fhbn-face {
+  font-size: 80px;
+}
+.fhcard-bignum-big .fhbn-outer { -webkit-text-stroke-width: 7px; }
+.fhcard-bignum-big .fhbn-face  { -webkit-text-stroke-width: 3.5px; }
+
+/* Rainbow fill on card 0 — static gradient, no animation */
+.fhcard-bignum-rb .fhbn-face {
+  background: linear-gradient(to bottom, #ff3333, #ff9900, #ffee00, #33cc33, #3399ff, #cc33ff, #ff3399);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke-width: 0;
+}
+
+/* Small-card number scale */
+.fhcard-small .fhbn-outer,
+.fhcard-small .fhbn-face {
+  font-size: 26px;
+}
+.fhcard-small .fhbn-outer {
+  -webkit-text-stroke-width: 3px;
+}
+.fhcard-small .fhbn-face {
+  -webkit-text-stroke-width: 1.5px;
+}
+
+/* ── Action card decoration SVG ───────────────────────────────────────────────── */
+.fhcard-deco {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Drapes (action card text) ────────────────────────────────────────────────── */
+.fhcard-drapes {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  padding: 0 10px 18px;
+}
+
+.fhcard-drape {
+  background: rgba(242, 236, 210, 0.92);
+  border-radius: 4px;
+  padding: 5px 0;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.35);
+}
+
+.fhcard-drape-text {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #fff;
+  -webkit-text-stroke: 2px #111;
+  paint-order: stroke fill;
+  font-family: 'Georgia', serif;
+  line-height: 1;
+}
+
+.fhcard-small .fhcard-drapes  { padding: 0 5px 9px; gap: 3px; }
+.fhcard-small .fhcard-drape   { padding: 2px 0; }
+.fhcard-small .fhcard-drape-text {
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  -webkit-text-stroke-width: 1px;
+}
+
+/* ── Small padding adjustments ────────────────────────────────────────────────── */
+.fhcard-small.fhcard-number,
+.fhcard-small.fhcard-score {
+  padding: 8px;
+}

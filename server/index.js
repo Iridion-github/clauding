@@ -178,8 +178,17 @@ fh.on('connection', (socket) => {
       if (room) {
         room.players = room.players.filter(p => p.socketId !== socket.id);
         room.playAgainVotes.delete(meta.playerId);
-        fh.to(meta.roomId).emit('fh_player_left', { playerId: meta.playerId });
-        if (room.players.length === 0) delete fhRooms[meta.roomId];
+        if (room.players.length === 0) {
+          delete fhRooms[meta.roomId];
+        } else {
+          if (room.hostId === socket.id) {
+            room.hostId = room.players[0].socketId;
+          }
+          fh.to(meta.roomId).emit('fh_room_update', {
+            players: room.players.map(p => ({ id: p.id, name: p.name })),
+            hostId: room.hostId,
+          });
+        }
       }
       delete fhSocketToRoom[socket.id];
     }

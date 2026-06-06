@@ -33,6 +33,7 @@ export function useFlippingHusks() {
     socket.on('fh_room_update', ({ players, hostId: hid }) => {
       setRoomPlayers(players);
       setHostId(hid);
+      setIsHost(socket.id === hid);
     });
     socket.on('fh_game_started', ({ state }) => {
       prevStateRef.current = state;
@@ -67,9 +68,6 @@ export function useFlippingHusks() {
     });
     socket.on('fh_action_rejected', ({ error: e }) => setActionError(e));
     socket.on('fh_error',          ({ message })   => setError(message));
-    socket.on('fh_player_left',    ({ playerId: pid }) => {
-      setRoomPlayers(prev => prev.filter(p => p.id !== pid));
-    });
 
     socket.connect();
     return () => socket.disconnect();

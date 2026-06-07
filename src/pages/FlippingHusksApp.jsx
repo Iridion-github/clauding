@@ -15,6 +15,7 @@ export function FlippingHusksApp() {
     error, actionError,
     animQueue, advanceAnim,
     playAgainVotes, votePlayAgain,
+    nextRoundVotes, voteNextRound,
     joinRoom, startGame, sendAction,
   } = useFlippingHusks();
 
@@ -87,6 +88,8 @@ export function FlippingHusksApp() {
           sendAction={sendAction}
           playAgainVotes={playAgainVotes}
           votePlayAgain={votePlayAgain}
+          nextRoundVotes={nextRoundVotes}
+          voteNextRound={voteNextRound}
           animating={currentAnim !== null}
         />
         {currentAnim?.type === 'reshuffle' && (

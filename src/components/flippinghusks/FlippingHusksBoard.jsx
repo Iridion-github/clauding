@@ -8,13 +8,14 @@ import './FlippingHusksBoard.css';
 const STATUS_COLOR = { active: 'default', stayed: 'success', busted: 'error', flippinghusks: 'primary' };
 const STATUS_LABEL = { active: 'Playing', stayed: 'Stayed', busted: 'Bust!', flippinghusks: 'Flipping Husks!' };
 
-export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain, animating }) {
+export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain, nextRoundVotes, voteNextRound, animating }) {
   const { players, playerOrder, activePlayerId, phase, round, drawPile, discardCount, log, winner, pendingAction } = gameState;
   const self = players[playerId];
   const opponents = playerOrder.filter(pid => pid !== playerId);
   const myPendingIsOpen = pendingAction != null && pendingAction.drawerId === playerId;
   const otherPending    = pendingAction != null && pendingAction.drawerId !== playerId;
-  const hasVotedPlayAgain = playAgainVotes.votes.includes(playerId);
+  const hasVotedPlayAgain  = playAgainVotes.votes.includes(playerId);
+  const hasVotedNextRound  = nextRoundVotes.votes.includes(playerId);
 
   const isMobile = useMediaQuery('(orientation: portrait), (max-width: 640px)');
   const [logOpen, setLogOpen] = useState(false);
@@ -155,6 +156,9 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
           hasVotedPlayAgain={hasVotedPlayAgain}
           votePlayAgain={votePlayAgain}
           playAgainVoteCount={playAgainVotes.votes.length}
+          hasVotedNextRound={hasVotedNextRound}
+          voteNextRound={voteNextRound}
+          nextRoundVoteCount={nextRoundVotes.votes.length}
         />
       )}
 
@@ -162,6 +166,14 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
       {phase === 'finished' && hasVotedPlayAgain && (
         <PlayAgainModal
           votes={playAgainVotes.votes}
+          players={playerOrder.map(pid => ({ id: pid, name: players[pid].name }))}
+        />
+      )}
+
+      {/* ── Next Round waiting modal ──────────────────────────────────────── */}
+      {phase === 'round_end' && hasVotedNextRound && (
+        <NextRoundModal
+          votes={nextRoundVotes.votes}
           players={playerOrder.map(pid => ({ id: pid, name: players[pid].name }))}
         />
       )}
@@ -195,15 +207,24 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
 }
 
 // ── Fixed bottom action bar ───────────────────────────────────────────────────
-function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePlayerId, winner, sendAction, hasVotedPlayAgain, votePlayAgain, playAgainVoteCount }) {
+function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePlayerId, winner, sendAction, hasVotedPlayAgain, votePlayAgain, playAgainVoteCount, hasVotedNextRound, voteNextRound, nextRoundVoteCount }) {
   if (phase === 'round_end') {
     return (
       <div className="fhaction-bar">
         <Scoreboard players={players} playerOrder={playerOrder} />
-        <Button variant="contained" color="primary" size="large"
-          onClick={() => sendAction({ type: 'NEXT_ROUND' })}>
-          Next Round →
-        </Button>
+        <button
+          className="fhaction-btn fhaction-btn-stay"
+          onClick={voteNextRound}
+          disabled={hasVotedNextRound}
+        >
+          <span className="fhaction-btn-icon">→</span>
+          <span className="fhaction-btn-main">{hasVotedNextRound ? 'Waiting…' : 'Next Round'}</span>
+          <span className="fhaction-btn-sub">
+            {hasVotedNextRound
+              ? `${nextRoundVoteCount}/${playerOrder.length} ready`
+              : 'Continue to next round'}
+          </span>
+        </button>
       </div>
     );
   }
@@ -301,6 +322,34 @@ function PlayAgainModal({ votes, players }) {
       <div className="fhplay-again-modal">
         <Typography variant="h6" sx={{ textAlign: 'center', mb: 2, fontWeight: 'bold' }}>
           ↺ Play Again?
+        </Typography>
+        <Stack spacing={1.5}>
+          {players.map(p => {
+            const ready = votes.includes(p.id);
+            return (
+              <div key={p.id} className={`fhplay-again-row ${ready ? 'ready' : 'waiting'}`}>
+                <span className="fhplay-again-icon">{ready ? '✓' : '⏳'}</span>
+                <span className="fhplay-again-name">{p.name}</span>
+                <span className="fhplay-again-status">{ready ? 'Ready!' : 'Waiting…'}</span>
+              </div>
+            );
+          })}
+        </Stack>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+          {votes.length} / {players.length} ready
+        </Typography>
+      </div>
+    </div>
+  );
+}
+
+// ── Next Round modal ──────────────────────────────────────────────────────────
+function NextRoundModal({ votes, players }) {
+  return (
+    <div className="fhplay-again-overlay">
+      <div className="fhplay-again-modal">
+        <Typography variant="h6" sx={{ textAlign: 'center', mb: 2, fontWeight: 'bold' }}>
+          → Next Round
         </Typography>
         <Stack spacing={1.5}>
           {players.map(p => {

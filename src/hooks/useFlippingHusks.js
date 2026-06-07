@@ -17,7 +17,8 @@ export function useFlippingHusks() {
   const [error, setError]             = useState(null);
   const [actionError, setActionError] = useState(null);
   const [animQueue, setAnimQueue]     = useState([]); // [{card,isBust,isFlippingHusks,secondChanceCard?,savedPlayerId?}]
-  const [playAgainVotes, setPlayAgainVotes] = useState({ votes: [], players: [] });
+  const [playAgainVotes, setPlayAgainVotes]   = useState({ votes: [], players: [] });
+  const [nextRoundVotes, setNextRoundVotes]   = useState({ votes: [], players: [] });
 
   useEffect(() => {
     const socket = io(SERVER_URL, { autoConnect: false });
@@ -55,6 +56,11 @@ export function useFlippingHusks() {
         return;
       }
 
+      // Clear next-round votes when the new round starts
+      if (prev?.phase === 'round_end' && state.phase !== 'round_end') {
+        setNextRoundVotes({ votes: [], players: [] });
+      }
+
       const newAnims = buildAnimQueue(prev, state);
       prevStateRef.current = state;
       setGameState(state);
@@ -63,9 +69,8 @@ export function useFlippingHusks() {
       }
       setActionError(null);
     });
-    socket.on('fh_play_again_update', ({ votes, players }) => {
-      setPlayAgainVotes({ votes, players });
-    });
+    socket.on('fh_play_again_update',  ({ votes, players }) => setPlayAgainVotes({ votes, players }));
+    socket.on('fh_next_round_update',   ({ votes, players }) => setNextRoundVotes({ votes, players }));
     socket.on('fh_action_rejected', ({ error: e }) => setActionError(e));
     socket.on('fh_error',          ({ message })   => setError(message));
 
@@ -78,7 +83,8 @@ export function useFlippingHusks() {
   const sendAction    = useCallback((action)       => { setActionError(null); socketRef.current?.emit('fh_action', { action }); }, []);
   const advanceAnim   = useCallback(() => setAnimQueue(q => q.slice(1)), []);
   const clearAnimQueue = useCallback(() => setAnimQueue([]), []);
-  const votePlayAgain  = useCallback(() => socketRef.current?.emit('fh_play_again'), []);
+  const votePlayAgain   = useCallback(() => socketRef.current?.emit('fh_play_again'), []);
+  const voteNextRound   = useCallback(() => socketRef.current?.emit('fh_next_round_vote'), []);
 
   const isMyTurn = gameState?.activePlayerId === playerId;
   const self     = gameState ? gameState.players[playerId] : null;
@@ -90,6 +96,7 @@ export function useFlippingHusks() {
     error, actionError,
     animQueue, advanceAnim, clearAnimQueue,
     playAgainVotes, votePlayAgain,
+    nextRoundVotes, voteNextRound,
     joinRoom, startGame, sendAction,
   };
 }

@@ -109,7 +109,7 @@ fh.on('connection', (socket) => {
 
   socket.on('fh_join', ({ roomId, playerName }) => {
     if (!fhRooms[roomId]) {
-      fhRooms[roomId] = { hostId: socket.id, players: [], state: null, playAgainVotes: new Set() };
+      fhRooms[roomId] = { hostId: socket.id, players: [], state: null, playAgainVotes: new Set(), nextRoundVotes: new Set() };
     }
     const room = fhRooms[roomId];
 
@@ -151,6 +151,29 @@ fh.on('connection', (socket) => {
     fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
   });
 
+  socket.on('fh_next_round_vote', () => {
+    const meta = fhSocketToRoom[socket.id];
+    if (!meta) return;
+    const room = fhRooms[meta.roomId];
+    if (!room?.state || room.state.phase !== 'round_end') return;
+
+    room.nextRoundVotes.add(meta.playerId);
+
+    fh.to(meta.roomId).emit('fh_next_round_update', {
+      votes: [...room.nextRoundVotes],
+      players: room.players.map(p => ({ id: p.id, name: p.name })),
+    });
+
+    if (room.nextRoundVotes.size >= room.players.length) {
+      room.nextRoundVotes.clear();
+      const result = applyFlippingHusksAction(room.state, room.players[0].id, { type: 'NEXT_ROUND' });
+      if (result.ok) {
+        room.state = result.state;
+        fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
+      }
+    }
+  });
+
   socket.on('fh_play_again', () => {
     const meta = fhSocketToRoom[socket.id];
     if (!meta) return;
@@ -178,6 +201,7 @@ fh.on('connection', (socket) => {
       if (room) {
         room.players = room.players.filter(p => p.socketId !== socket.id);
         room.playAgainVotes.delete(meta.playerId);
+        room.nextRoundVotes.delete(meta.playerId);
         if (room.players.length === 0) {
           delete fhRooms[meta.roomId];
         } else {
@@ -188,6 +212,15 @@ fh.on('connection', (socket) => {
             players: room.players.map(p => ({ id: p.id, name: p.name })),
             hostId: room.hostId,
           });
+          // If everyone remaining has voted for next round, start it
+          if (room.state?.phase === 'round_end' && room.nextRoundVotes.size >= room.players.length) {
+            room.nextRoundVotes.clear();
+            const result = applyFlippingHusksAction(room.state, room.players[0].id, { type: 'NEXT_ROUND' });
+            if (result.ok) {
+              room.state = result.state;
+              fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
+            }
+          }
         }
       }
       delete fhSocketToRoom[socket.id];

@@ -1,0 +1,16 @@
+# Render Blueprint — deploys the whole app as ONE free Web Service.
+# The Express + Socket.IO server (server/index.js) also serves the React build,
+# and the client connects to window.location.origin in production, so no code
+# changes are needed.  Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: flippinghusks
+    runtime: node          # if your Render account rejects this, use `env: node`
+    plan: free
+    # CI=false        → a stray ESLint warning can't fail the production build
+    # GENERATE_SOURCEMAP=false → faster, lighter build (fits the 512MB free box)
+    buildCommand: npm install && CI=false GENERATE_SOURCEMAP=false npm run build
+    startCommand: node server/index.js
+    envVars:
+      - key: NODE_VERSION
+        value: "20"

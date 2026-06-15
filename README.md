@@ -29,6 +29,20 @@ npm start              # http://localhost:3000 (hot reload)
 
 Then open [http://localhost:3000](http://localhost:3000). In development the frontend connects to the backend at `http://localhost:3001/flippinghusks`.
 
+## Deploying to Render (free tier)
+
+The whole app ships as **one** Render Web Service: `server/index.js` (Express + Socket.IO) serves the built React app, and the client connects to `window.location.origin` in production — so no code changes are needed.
+
+A [`render.yaml`](./render.yaml) blueprint is included. Either push it and use **New → Blueprint** on Render, or create the service manually:
+
+- **Type:** Web Service · **Plan:** Free · **Runtime:** Node
+- **Build Command:** `npm install && CI=false GENERATE_SOURCEMAP=false npm run build`
+- **Start Command:** `node server/index.js` (⚠️ do **not** leave the default `npm start` — that runs the dev server)
+
+Render injects `PORT` automatically (the server already reads `process.env.PORT`). WebSockets work on Render with no extra config.
+
+**Free-tier caveat:** the service sleeps after ~15 min idle. Waking it takes ~30–60s (cold start), and because game state lives in memory it is **wiped on every sleep/restart** — so after a cold start, everyone should rejoin a fresh room.
+
 ## Available Scripts
 
 In the project directory, you can run:

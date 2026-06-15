@@ -5,9 +5,37 @@ const SERVER_URL = process.env.NODE_ENV === 'production'
   ? `${window.location.origin}/flippinghusks`
   : 'http://localhost:3001/flippinghusks';
 
+const ACTION_RETRY_MS = 2500; // re-send an unacknowledged action every ~2.5s
+
+// A stable PER-TAB identity. Socket ids change on every reconnect, so we key the
+// player on this instead — that's what lets a dropped player reconnect and be
+// recognized as the SAME player rather than a new one.
+//
+// Must be sessionStorage, NOT localStorage: localStorage is shared across all
+// tabs of a browser, so two tabs would share one id and the server would treat
+// the second join as a reconnect of the first — collapsing both into a single
+// player (each "alone" in the room). sessionStorage is scoped to one tab and
+// still survives socket drops and page refreshes, so reconnection keeps working.
+function getPersistentPlayerId() {
+  const fresh = () => 'p_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  try {
+    let id = sessionStorage.getItem('fh_playerId');
+    if (!id) { id = fresh(); sessionStorage.setItem('fh_playerId', id); }
+    return id;
+  } catch {
+    return fresh();
+  }
+}
+
 export function useFlippingHusks() {
   const socketRef    = useRef(null);
   const prevStateRef = useRef(null); // last-seen state, used to diff for animations
+  const clientIdRef  = useRef(getPersistentPlayerId());
+  const joinInfoRef  = useRef(null); // { roomId, name } — replayed on every (re)connect
+  const sessionRef   = useRef(Math.random().toString(36).slice(2, 8)); // unique per page-load
+  const actionSeqRef = useRef(0);
+  const pendingActionRef = useRef(null); // { actionId, cancelled, timer } for the retry loop
+
   const [connected, setConnected]     = useState(false);
   const [playerId, setPlayerId]       = useState(null);
   const [isHost, setIsHost]           = useState(false);
@@ -22,10 +50,22 @@ export function useFlippingHusks() {
   const [nextRoundDeadline, setNextRoundDeadline] = useState(null); // epoch ms; null = no countdown
 
   useEffect(() => {
-    const socket = io(SERVER_URL, { autoConnect: false });
+    const clientId = clientIdRef.current;
+    const socket = io(SERVER_URL, {
+      autoConnect: false,
+      reconnection: true,
+      reconnectionDelay: 2000,    // first reconnect attempt after ~2s
+      reconnectionDelayMax: 3000, // subsequent attempts every ~2-3s
+      timeout: 8000,
+    });
     socketRef.current = socket;
 
-    socket.on('connect',    () => setConnected(true));
+    socket.on('connect', () => {
+      setConnected(true);
+      // (Re)join automatically so a reconnecting player resyncs to live state.
+      const j = joinInfoRef.current;
+      if (j) socket.emit('fh_join', { roomId: j.roomId, playerName: j.name, playerId: clientId });
+    });
     socket.on('disconnect', () => setConnected(false));
 
     socket.on('fh_joined', ({ playerId: pid, isHost: h }) => {
@@ -35,16 +75,31 @@ export function useFlippingHusks() {
     socket.on('fh_room_update', ({ players, hostId: hid }) => {
       setRoomPlayers(players);
       setHostId(hid);
-      setIsHost(socket.id === hid);
+      setIsHost(clientId === hid);
     });
     socket.on('fh_game_started', ({ state }) => {
       prevStateRef.current = state;
       setGameState(state);
       setError(null);
       setPlayAgainVotes({ votes: [], players: [] });
+      setNextRoundVotes({ votes: [], players: [] });
       setNextRoundDeadline(null);
       setAnimQueue([]);
     });
+
+    // Full authoritative state replacement after a reconnect: jump straight to the
+    // current state WITHOUT replaying the animations missed while offline.
+    socket.on('fh_resync', ({ state, nextRoundDeadline: nrd, nextRoundVotes: nrv, playAgainVotes: pav }) => {
+      prevStateRef.current = state;
+      setGameState(state);
+      setAnimQueue([]);
+      setActionError(null);
+      setError(null);
+      setNextRoundDeadline(nrd ?? null);
+      if (nrv) setNextRoundVotes(nrv);
+      if (pav) setPlayAgainVotes(pav);
+    });
+
     socket.on('fh_state_update', ({ state }) => {
       const prev = prevStateRef.current;
 
@@ -80,12 +135,65 @@ export function useFlippingHusks() {
     socket.on('fh_error',          ({ message })   => setError(message));
 
     socket.connect();
-    return () => socket.disconnect();
+    return () => {
+      const p = pendingActionRef.current;
+      if (p) { clearTimeout(p.timer); p.cancelled = true; }
+      socket.disconnect();
+    };
   }, []);
 
-  const joinRoom      = useCallback((roomId, name) => socketRef.current?.emit('fh_join',    { roomId, playerName: name }), []);
-  const startGame     = useCallback((roomId)       => socketRef.current?.emit('fh_start',   { roomId }), []);
-  const sendAction    = useCallback((action)       => { setActionError(null); socketRef.current?.emit('fh_action', { action }); }, []);
+  const joinRoom = useCallback((roomId, name) => {
+    joinInfoRef.current = { roomId, name }; // remembered so reconnects auto-rejoin
+    socketRef.current?.emit('fh_join', { roomId, playerName: name, playerId: clientIdRef.current });
+  }, []);
+
+  const startGame = useCallback((roomId) => socketRef.current?.emit('fh_start', { roomId }), []);
+
+  // Send an action reliably. We wait for a server acknowledgement; if none arrives
+  // (lost packet / temporary disconnect) we retry every ~2.5s until it lands. Each
+  // logical action carries a stable actionId, so a retry that reaches the server
+  // after the original already applied is ignored — no double draws.
+  const sendAction = useCallback((action) => {
+    setActionError(null);
+
+    // Supersede any still-retrying earlier action (turn-based: one at a time).
+    if (pendingActionRef.current) {
+      clearTimeout(pendingActionRef.current.timer);
+      pendingActionRef.current.cancelled = true;
+    }
+
+    // Session nonce keeps ids unique across page reloads, so a fresh action can
+    // never be mistaken for a pre-reload duplicate.
+    const actionId = `${clientIdRef.current}:${sessionRef.current}:${++actionSeqRef.current}`;
+    const entry = { actionId, cancelled: false, timer: null };
+    pendingActionRef.current = entry;
+
+    const attempt = () => {
+      if (entry.cancelled) return;
+      const socket = socketRef.current;
+      if (!socket || !socket.connected) {
+        // Offline — don't pile up buffered packets; just try again shortly.
+        entry.timer = setTimeout(attempt, ACTION_RETRY_MS);
+        return;
+      }
+      socket.timeout(ACTION_RETRY_MS).emit('fh_action', { action, actionId }, (err, res) => {
+        if (entry.cancelled) return;
+        if (err) {
+          // No acknowledgement within the window → the query went wrong; retry.
+          entry.timer = setTimeout(attempt, ACTION_RETRY_MS);
+        } else if (res && res.ok === false) {
+          // Server received and rejected it on the merits — stop retrying.
+          setActionError(res.error);
+          if (pendingActionRef.current === entry) pendingActionRef.current = null;
+        } else {
+          // Applied (or recognized as a duplicate) — done.
+          if (pendingActionRef.current === entry) pendingActionRef.current = null;
+        }
+      });
+    };
+    attempt();
+  }, []);
+
   const advanceAnim   = useCallback(() => setAnimQueue(q => q.slice(1)), []);
   const clearAnimQueue = useCallback(() => setAnimQueue([]), []);
   const votePlayAgain   = useCallback(() => socketRef.current?.emit('fh_play_again'), []);

@@ -8,8 +8,9 @@ import './FlippingHusksBoard.css';
 const STATUS_COLOR = { active: 'default', stayed: 'success', busted: 'error', flippinghusks: 'primary' };
 const STATUS_LABEL = { active: 'Playing', stayed: 'Stayed', busted: 'Bust!', flippinghusks: 'Flipping Husks!' };
 
-export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain, nextRoundVotes, voteNextRound, nextRoundDeadline, animating }) {
+export function FlippingHusksBoard({ gameState, playerId, connected = true, roomPlayers = [], isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain, nextRoundVotes, voteNextRound, nextRoundDeadline, animating }) {
   const { players, playerOrder, activePlayerId, phase, round, drawPile, discardCount, log, winner, pendingAction } = gameState;
+  const offlineIds = new Set(roomPlayers.filter(p => p.connected === false).map(p => p.id));
   const self = players[playerId];
   const opponents = playerOrder.filter(pid => pid !== playerId);
   const myPendingIsOpen = pendingAction != null && pendingAction.drawerId === playerId;
@@ -78,6 +79,7 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
                     <Typography variant="body2" fontWeight="bold">{p.name}</Typography>
                     <Chip label={STATUS_LABEL[p.status]} color={STATUS_COLOR[p.status]} size="small" />
+                    {offlineIds.has(pid) && <Chip label="offline" size="small" variant="outlined" />}
                     {isActive && <Chip label="▶" size="small" color="warning" variant="outlined" />}
                     <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
                       {p.totalScore} pts
@@ -146,6 +148,11 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
         <div className="fhturn-banner">⚡ Your Turn</div>
       )}
 
+      {/* ── Connection-lost banner (this player is offline / reconnecting) ──── */}
+      {!connected && (
+        <div className="fhreconnect-banner">⚠ Connection lost — reconnecting…</div>
+      )}
+
       {/* ── Auto-advance countdown bar at top (round over → nobody can act) ─── */}
       {phase === 'round_end' && !animating && (
         <NextRoundCountdown
@@ -161,6 +168,7 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
           phase={phase} isMyTurn={isMyTurn} self={self}
           players={players} playerOrder={playerOrder}
           activePlayerId={activePlayerId} winner={winner}
+          activePlayerOffline={offlineIds.has(activePlayerId)}
           sendAction={sendAction}
           hasVotedPlayAgain={hasVotedPlayAgain}
           votePlayAgain={votePlayAgain}
@@ -209,7 +217,7 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
 }
 
 // ── Fixed bottom action bar ───────────────────────────────────────────────────
-function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePlayerId, winner, sendAction, hasVotedPlayAgain, votePlayAgain, playAgainVoteCount, hasVotedNextRound, voteNextRound, nextRoundVoteCount }) {
+function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePlayerId, winner, activePlayerOffline, sendAction, hasVotedPlayAgain, votePlayAgain, playAgainVoteCount, hasVotedNextRound, voteNextRound, nextRoundVoteCount }) {
   if (phase === 'round_end') {
     return (
       <div className="fhaction-bar">
@@ -257,6 +265,7 @@ function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePla
       <div className="fhaction-bar">
         <Typography className="fhaction-status">
           Waiting for {players[activePlayerId]?.name ?? '…'} to act…
+          {activePlayerOffline && ' (reconnecting…)'}
         </Typography>
       </div>
     );

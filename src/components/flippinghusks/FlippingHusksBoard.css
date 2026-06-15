@@ -184,6 +184,22 @@
   z-index: 200;
 }
 
+/* ── Connection-lost banner (this client is offline / reconnecting) ──────────── */
+.fhreconnect-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 300px;          /* leave room for the log sidebar on desktop */
+  text-align: center;
+  padding: 7px 0;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #fff;
+  background: #b71c1c;
+  z-index: 400;          /* above the turn banner / countdown */
+}
+
 /* ── Next-round auto-advance countdown bar ───────────────────────────────────── */
 .fhcountdown-bar {
   position: fixed;
@@ -450,8 +466,9 @@
     padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
     flex-wrap: wrap;
   }
-  .fhturn-banner    { right: 0; }
-  .fhcountdown-bar  { right: 0; }
+  .fhturn-banner      { right: 0; }
+  .fhcountdown-bar    { right: 0; }
+  .fhreconnect-banner { right: 0; }
 
   /* Buttons fill the bar; text stays large and legible */
   .fhaction-btn {

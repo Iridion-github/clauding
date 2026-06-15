@@ -83,6 +83,8 @@ export function FlippingHusksApp() {
         <FlippingHusksBoard
           gameState={displayedGameState}
           playerId={playerId}
+          connected={connected}
+          roomPlayers={roomPlayers}
           isMyTurn={isMyTurn}
           actionError={actionError}
           sendAction={sendAction}

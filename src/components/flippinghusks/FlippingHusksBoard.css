@@ -184,6 +184,42 @@
   z-index: 200;
 }
 
+/* ── Next-round auto-advance countdown bar ───────────────────────────────────── */
+.fhcountdown-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 300px;          /* leave room for the log sidebar on desktop */
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: rgba(8, 12, 20, 0.96);
+  border-bottom: 1px solid #2a2a2a;
+  z-index: 250;
+}
+/* shrinking fill behind the label tracks the time remaining */
+.fhcountdown-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, #f9a825, #f0c040);
+  opacity: 0.3;
+  transition: width 0.2s linear;
+  z-index: 0;
+}
+.fhcountdown-text {
+  position: relative;
+  z-index: 1;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #f0c040;
+}
+
 /* ── Log sidebar ─────────────────────────────────────────────────────────────── */
 .fhboard-log-sidebar {
   grid-column: 2;
@@ -372,27 +408,73 @@
     grid-template-columns: 1fr;
   }
 
-  /* Shrink my-area min-height so cards don't dominate a small screen */
-  .fhboard-me-cards {
-    min-height: 120px;
+  /* Tighten the main column to reclaim horizontal space; clear the action bar + notch */
+  .fhboard-main {
+    padding: 8px 8px;
+    padding-top: 34px;
+    padding-bottom: calc(112px + env(safe-area-inset-bottom));
+    gap: 8px;
   }
 
-  /* Narrow opponents down so more fit per row */
-  .fhopponent {
-    min-width: 140px;
+  /* Compact header: smaller title so the chips fit alongside it */
+  .fhboard-title { font-size: 1.05rem !important; }
+
+  /* Shrink my-area chrome so the cards get the room, not the padding */
+  .fhboard-me        { padding: 12px 12px; border-radius: 12px; }
+  .fhboard-me-header { gap: 6px; margin-bottom: 10px; }
+  .fhboard-me-cards  { min-height: 120px; gap: 8px; justify-content: center; }
+
+  /* Opponents: even grid so a lone last player doesn't stretch full-width.
+     auto-fill keeps columns ≥150px → 2 per row on phones, 3+ on wider screens. */
+  .fhboard-opponents {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+    align-items: start;
+  }
+  .fhopponent        { min-width: 0; padding: 8px 10px; }
+  .fhopponent-cards  { gap: 4px; min-height: 0; margin-top: 6px; }
+
+  /* Bigger, clearer log toggle — comfortable tap target with readable text */
+  .fhlog-toggle {
+    height: 30px !important;
+    font-size: 13px !important;
   }
 
-  /* Action bar and turn banner span full width */
-  .fhaction-bar  { right: 0; }
-  .fhturn-banner { right: 0; }
+  /* Action bar + turn banner span full width and respect the home-bar / notch */
+  .fhaction-bar {
+    right: 0;
+    height: auto;
+    min-height: 90px;
+    gap: 10px;
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+    flex-wrap: wrap;
+  }
+  .fhturn-banner    { right: 0; }
+  .fhcountdown-bar  { right: 0; }
 
-  /* Buttons grow to fill the bar instead of fixed 210 px */
+  /* Buttons fill the bar; text stays large and legible */
   .fhaction-btn {
-    flex: 1;
+    flex: 1 1 0;
     width: auto;
     min-width: 0;
-    height: 64px;
+    height: 70px;
+    border-radius: 12px;
   }
+  .fhaction-btn-icon { font-size: 19px; }
+  .fhaction-btn-main { font-size: 21px; }
+  .fhaction-btn-sub  { font-size: 12px; opacity: 0.82; }
+  .fhaction-status   { font-size: 14px; }
+
+  /* Round-over / game-over: scoreboard on its own row, full-width button below it.
+     Cap + scroll it so a 6-player scoreboard can't push the bar over the screen. */
+  .fhscoreboard {
+    flex: 1 1 100%;
+    text-align: center;
+    max-height: 30vh;
+    overflow-y: auto;
+  }
+  .fhscoreboard .MuiStack-root { justify-content: center; }
 
   /* Log: completely absent when closed — no visual, no hit area */
   .fhboard-log-sidebar {
@@ -407,7 +489,7 @@
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 104px;
+    bottom: calc(94px + env(safe-area-inset-bottom));
     height: 42vh;
     border-left: none;
     border-top: 1px solid #2a2a2a;
@@ -418,11 +500,16 @@
 
   /* Target picker — full width, just above action bar */
   .fhtarget-picker {
-    left: 10px;
-    right: 10px;
+    left: 8px;
+    right: 8px;
     width: auto;
     max-width: none;
-    bottom: 114px;
+    bottom: calc(94px + env(safe-area-inset-bottom));
+    padding: 16px 14px;
+    /* With up to 6 target buttons + the card, keep it on-screen and scroll if needed */
+    max-height: calc(100vh - 94px - env(safe-area-inset-bottom) - 12px);
+    max-height: calc(100dvh - 94px - env(safe-area-inset-bottom) - 12px);
+    overflow-y: auto;
   }
   .fhtarget-picker-inner {
     flex-direction: column;
@@ -442,14 +529,24 @@
   .fhtarget-picker-title {
     justify-content: center;
     flex-wrap: wrap;
+    font-size: 19px;
+  }
+
+  /* Target buttons: large tap targets, readable labels */
+  .fhtarget-btn {
+    flex: 1 1 140px;
+    min-height: 52px;
+    justify-content: center;
+    font-size: 16px;
+    padding: 10px 14px;
   }
 
   /* Observer modal — full width */
   .fhobserver-modal {
-    left: 10px;
-    right: 10px;
+    left: 8px;
+    right: 8px;
     width: auto;
     max-width: none;
-    bottom: 114px;
+    bottom: calc(94px + env(safe-area-inset-bottom));
   }
 }

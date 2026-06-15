@@ -30,8 +30,8 @@ export function Hub() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        pt: 10,
-        px: 3,
+        pt: { xs: 6, sm: 10 },
+        px: { xs: 2, sm: 3 },
       }}
     >
       <Stack spacing={1} sx={{ alignItems: 'center', mb: 6 }}>

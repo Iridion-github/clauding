@@ -19,6 +19,7 @@ export function useFlippingHusks() {
   const [animQueue, setAnimQueue]     = useState([]); // [{card,isBust,isFlippingHusks,secondChanceCard?,savedPlayerId?}]
   const [playAgainVotes, setPlayAgainVotes]   = useState({ votes: [], players: [] });
   const [nextRoundVotes, setNextRoundVotes]   = useState({ votes: [], players: [] });
+  const [nextRoundDeadline, setNextRoundDeadline] = useState(null); // epoch ms; null = no countdown
 
   useEffect(() => {
     const socket = io(SERVER_URL, { autoConnect: false });
@@ -41,6 +42,7 @@ export function useFlippingHusks() {
       setGameState(state);
       setError(null);
       setPlayAgainVotes({ votes: [], players: [] });
+      setNextRoundDeadline(null);
       setAnimQueue([]);
     });
     socket.on('fh_state_update', ({ state }) => {
@@ -49,6 +51,7 @@ export function useFlippingHusks() {
       // Play-again reset: wipe queue so no stale animations bleed into next game
       if (prev?.phase === 'finished' && state.phase === 'playing') {
         setPlayAgainVotes({ votes: [], players: [] });
+        setNextRoundDeadline(null);
         setAnimQueue([]);
         prevStateRef.current = state;
         setGameState(state);
@@ -56,9 +59,10 @@ export function useFlippingHusks() {
         return;
       }
 
-      // Clear next-round votes when the new round starts
+      // Clear next-round votes + countdown when the new round starts
       if (prev?.phase === 'round_end' && state.phase !== 'round_end') {
         setNextRoundVotes({ votes: [], players: [] });
+        setNextRoundDeadline(null);
       }
 
       const newAnims = buildAnimQueue(prev, state);
@@ -71,6 +75,7 @@ export function useFlippingHusks() {
     });
     socket.on('fh_play_again_update',  ({ votes, players }) => setPlayAgainVotes({ votes, players }));
     socket.on('fh_next_round_update',   ({ votes, players }) => setNextRoundVotes({ votes, players }));
+    socket.on('fh_next_round_countdown', ({ deadline }) => setNextRoundDeadline(deadline));
     socket.on('fh_action_rejected', ({ error: e }) => setActionError(e));
     socket.on('fh_error',          ({ message })   => setError(message));
 
@@ -96,7 +101,7 @@ export function useFlippingHusks() {
     error, actionError,
     animQueue, advanceAnim, clearAnimQueue,
     playAgainVotes, votePlayAgain,
-    nextRoundVotes, voteNextRound,
+    nextRoundVotes, voteNextRound, nextRoundDeadline,
     joinRoom, startGame, sendAction,
   };
 }

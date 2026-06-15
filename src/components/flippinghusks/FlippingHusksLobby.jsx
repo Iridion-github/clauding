@@ -26,7 +26,8 @@ export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPl
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', px: 3, py: 6, position: 'relative' }}>
       <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/')} color="inherit"
-        sx={{ position: 'absolute', top: 20, left: 20 }}>
+        variant="outlined"
+        sx={{ position: 'absolute', top: { xs: 12, sm: 20 }, left: { xs: 12, sm: 20 }, borderColor: 'rgba(255,255,255,0.18)' }}>
         Back
       </Button>
 
@@ -44,9 +45,9 @@ export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPl
         <Box component="form" onSubmit={handleJoin} sx={{ width: '100%', maxWidth: 360 }}>
           <Stack spacing={2.5}>
             <TextField label="Room Code" value={inputRoomId} onChange={e => setInputRoomId(e.target.value.toUpperCase())}
-              slotProps={{ htmlInput: { maxLength: 8 } }} size="small" fullWidth placeholder="e.g. GAME01" />
+              slotProps={{ htmlInput: { maxLength: 8 } }} fullWidth placeholder="e.g. GAME01" />
             <TextField label="Your Name" value={name} onChange={e => setName(e.target.value)}
-              size="small" fullWidth placeholder="Enter your name" />
+              fullWidth placeholder="Enter your name" />
             {error && <Alert severity="error">{error}</Alert>}
             <Button type="submit" variant="contained" color="primary" size="large" fullWidth
               disabled={!connected || !name.trim() || !inputRoomId.trim()}>

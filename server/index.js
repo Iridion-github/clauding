@@ -104,12 +104,50 @@ const fhSocketToRoom = {};
 
 const fh = io.of('/flippinghusks');
 
+// When a round ends, every player no longer has to press "Next Round" for the
+// game to continue: a shared countdown auto-advances the round. All clients get
+// the same absolute `deadline` so they can render a synchronized countdown bar.
+const NEXT_ROUND_COUNTDOWN_MS = 10000;
+
+function clearNextRoundTimer(room) {
+  if (room && room.nextRoundTimer) {
+    clearTimeout(room.nextRoundTimer);
+    room.nextRoundTimer = null;
+  }
+}
+
+// Start (or restart) the auto-advance countdown for a freshly-ended round.
+function scheduleNextRound(roomId) {
+  const room = fhRooms[roomId];
+  if (!room?.state || room.state.phase !== 'round_end') return;
+  clearNextRoundTimer(room);
+  room.nextRoundDeadline = Date.now() + NEXT_ROUND_COUNTDOWN_MS;
+  room.nextRoundTimer = setTimeout(() => advanceToNextRound(roomId), NEXT_ROUND_COUNTDOWN_MS);
+  fh.to(roomId).emit('fh_next_round_countdown', { deadline: room.nextRoundDeadline });
+}
+
+// Advance the round exactly as if everyone had pressed "Next Round". Shared by
+// the all-voted path, the countdown timer, and the disconnect re-check. Guarded
+// so it safely no-ops if the round has already advanced.
+function advanceToNextRound(roomId) {
+  const room = fhRooms[roomId];
+  if (!room?.state || room.state.phase !== 'round_end' || room.players.length === 0) return;
+  clearNextRoundTimer(room);
+  room.nextRoundDeadline = null;
+  room.nextRoundVotes.clear();
+  const result = applyFlippingHusksAction(room.state, room.players[0].id, { type: 'NEXT_ROUND' });
+  if (result.ok) {
+    room.state = result.state;
+    fh.to(roomId).emit('fh_state_update', { state: fhClientState(room.state) });
+  }
+}
+
 fh.on('connection', (socket) => {
   console.log('[FlippingHusks] Connected:', socket.id);
 
   socket.on('fh_join', ({ roomId, playerName }) => {
     if (!fhRooms[roomId]) {
-      fhRooms[roomId] = { hostId: socket.id, players: [], state: null, playAgainVotes: new Set(), nextRoundVotes: new Set() };
+      fhRooms[roomId] = { hostId: socket.id, players: [], state: null, playAgainVotes: new Set(), nextRoundVotes: new Set(), nextRoundTimer: null, nextRoundDeadline: null };
     }
     const room = fhRooms[roomId];
 
@@ -149,6 +187,11 @@ fh.on('connection', (socket) => {
 
     room.state = result.state;
     fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
+
+    // The round just ended → kick off the shared auto-advance countdown.
+    if (room.state.phase === 'round_end' && !room.nextRoundTimer) {
+      scheduleNextRound(meta.roomId);
+    }
   });
 
   socket.on('fh_next_round_vote', () => {
@@ -164,13 +207,9 @@ fh.on('connection', (socket) => {
       players: room.players.map(p => ({ id: p.id, name: p.name })),
     });
 
+    // Everyone readied up → skip the countdown and advance immediately.
     if (room.nextRoundVotes.size >= room.players.length) {
-      room.nextRoundVotes.clear();
-      const result = applyFlippingHusksAction(room.state, room.players[0].id, { type: 'NEXT_ROUND' });
-      if (result.ok) {
-        room.state = result.state;
-        fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
-      }
+      advanceToNextRound(meta.roomId);
     }
   });
 
@@ -203,6 +242,7 @@ fh.on('connection', (socket) => {
         room.playAgainVotes.delete(meta.playerId);
         room.nextRoundVotes.delete(meta.playerId);
         if (room.players.length === 0) {
+          clearNextRoundTimer(room);
           delete fhRooms[meta.roomId];
         } else {
           if (room.hostId === socket.id) {
@@ -212,14 +252,9 @@ fh.on('connection', (socket) => {
             players: room.players.map(p => ({ id: p.id, name: p.name })),
             hostId: room.hostId,
           });
-          // If everyone remaining has voted for next round, start it
+          // A departure may have made the remaining players unanimous → advance.
           if (room.state?.phase === 'round_end' && room.nextRoundVotes.size >= room.players.length) {
-            room.nextRoundVotes.clear();
-            const result = applyFlippingHusksAction(room.state, room.players[0].id, { type: 'NEXT_ROUND' });
-            if (result.ok) {
-              room.state = result.state;
-              fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
-            }
+            advanceToNextRound(meta.roomId);
           }
         }
       }

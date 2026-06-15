@@ -8,7 +8,7 @@ import './FlippingHusksBoard.css';
 const STATUS_COLOR = { active: 'default', stayed: 'success', busted: 'error', flippinghusks: 'primary' };
 const STATUS_LABEL = { active: 'Playing', stayed: 'Stayed', busted: 'Bust!', flippinghusks: 'Flipping Husks!' };
 
-export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain, nextRoundVotes, voteNextRound, animating }) {
+export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain, nextRoundVotes, voteNextRound, nextRoundDeadline, animating }) {
   const { players, playerOrder, activePlayerId, phase, round, drawPile, discardCount, log, winner, pendingAction } = gameState;
   const self = players[playerId];
   const opponents = playerOrder.filter(pid => pid !== playerId);
@@ -46,15 +46,15 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
         <div className="fhboard-header">
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap', flex: 1 }}>
-              <Typography variant="h6" color="primary" fontWeight="bold">Flipping Husks</Typography>
+              <Typography className="fhboard-title" variant="h6" color="primary" fontWeight="bold">Flipping Husks</Typography>
               <Chip label={`Round ${round}`} size="small" variant="outlined" />
-              <Chip label={`Deck: ${drawPile.length}`} size="small" variant="outlined" />
-              <Chip label={`Used: ${discardCount ?? 0}`} size="small" variant="outlined" />
+              <Chip label={`Deck ${drawPile.length} · ${discardCount ?? 0} used`} size="small" variant="outlined" />
               {phase === 'round_end' && <Chip label="Round over" color="warning" size="small" />}
               {phase === 'finished'  && <Chip label={`${players[winner].name} wins!`} color="primary" />}
             </Stack>
             {isMobile && (
               <Chip
+                className="fhlog-toggle"
                 label={logOpen ? '✕ Log' : '📜 Log'}
                 size="small"
                 onClick={() => setLogOpen(o => !o)}
@@ -146,6 +146,15 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
         <div className="fhturn-banner">⚡ Your Turn</div>
       )}
 
+      {/* ── Auto-advance countdown bar at top (round over → nobody can act) ─── */}
+      {phase === 'round_end' && !animating && (
+        <NextRoundCountdown
+          deadline={nextRoundDeadline}
+          totalMs={10000}
+          onExpire={voteNextRound}
+        />
+      )}
+
       {/* ── Fixed action bar (bottom of main column) ─────────────────────── */}
       {!myPendingIsOpen && (
         <FixedActionBar
@@ -170,14 +179,6 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
         />
       )}
 
-      {/* ── Next Round waiting modal ──────────────────────────────────────── */}
-      {phase === 'round_end' && hasVotedNextRound && (
-        <NextRoundModal
-          votes={nextRoundVotes.votes}
-          players={playerOrder.map(pid => ({ id: pid, name: players[pid].name }))}
-        />
-      )}
-
       {/* ── Target picker (drawer chooses) ───────────────────────────────── */}
       {myPendingIsOpen && !animating && (
         <TargetPicker
@@ -186,6 +187,7 @@ export function FlippingHusksBoard({ gameState, playerId, isMyTurn, actionError,
           players={players}
           playerOrder={playerOrder}
           playerId={playerId}
+          isMobile={isMobile}
           onSelect={targetId => {
             const actionType = pendingAction.type === 'freeze' ? 'RESOLVE_FREEZE' : 'RESOLVE_FLIP_THREE';
             sendAction({ type: actionType, targetId });
@@ -288,7 +290,7 @@ function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePla
 function Scoreboard({ players, playerOrder, final = false }) {
   const sorted = [...playerOrder].sort((a, b) => players[b].totalScore - players[a].totalScore);
   return (
-    <Box>
+    <Box className="fhscoreboard">
       <Typography variant="body2" fontWeight="bold" mb={0.5}>
         {final ? '🏆 Final Scores' : 'Round scores:'}
       </Typography>
@@ -343,35 +345,46 @@ function PlayAgainModal({ votes, players }) {
   );
 }
 
-// ── Next Round modal ──────────────────────────────────────────────────────────
-function NextRoundModal({ votes, players }) {
+// ── Next Round countdown bar ────────────────────────────────────────────────────
+// Shown at the top once a round ends (no player can hit/stay anymore). Prefers the
+// server's shared deadline for cross-player sync, but falls back to a local 10s
+// timer so the bar always appears. When it reaches zero it calls onExpire (cast
+// this player's "Next Round" vote): once every client has expired/voted the server
+// advances the round — so nobody is ever left stuck waiting.
+function NextRoundCountdown({ deadline, totalMs, onExpire }) {
+  const [target] = useState(() => deadline ?? Date.now() + totalMs);
+  const [now, setNow] = useState(() => Date.now());
+  const firedRef = useRef(false);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 200);
+    return () => clearInterval(id);
+  }, []);
+
+  const msLeft  = Math.max(0, target - now);
+  const seconds = Math.ceil(msLeft / 1000);
+  const pct     = Math.max(0, Math.min(100, (msLeft / totalMs) * 100));
+
+  useEffect(() => {
+    if (msLeft === 0 && !firedRef.current) {
+      firedRef.current = true;
+      onExpire?.();
+    }
+  }, [msLeft, onExpire]);
+
   return (
-    <div className="fhplay-again-overlay">
-      <div className="fhplay-again-modal">
-        <Typography variant="h6" sx={{ textAlign: 'center', mb: 2, fontWeight: 'bold' }}>
-          → Next Round
-        </Typography>
-        <Stack spacing={1.5}>
-          {players.map(p => {
-            const ready = votes.includes(p.id);
-            return (
-              <div key={p.id} className={`fhplay-again-row ${ready ? 'ready' : 'waiting'}`}>
-                <span className="fhplay-again-icon">{ready ? '✓' : '⏳'}</span>
-                <span className="fhplay-again-name">{p.name}</span>
-                <span className="fhplay-again-status">{ready ? 'Ready!' : 'Waiting…'}</span>
-              </div>
-            );
-          })}
-        </Stack>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
-          {votes.length} / {players.length} ready
-        </Typography>
-      </div>
+    <div className="fhcountdown-bar" role="status" aria-live="polite">
+      <div className="fhcountdown-fill" style={{ width: `${pct}%` }} />
+      <span className="fhcountdown-text">
+        {msLeft > 0
+          ? `${seconds} second${seconds === 1 ? '' : 's'} to next round`
+          : 'Starting next round…'}
+      </span>
     </div>
   );
 }
 
-function TargetPicker({ type, card, players, playerOrder, playerId, onSelect }) {
+function TargetPicker({ type, card, players, playerOrder, playerId, isMobile, onSelect }) {
   const theme = PICKER_THEME[type] ?? PICKER_THEME.freeze;
   const onlySelf = playerOrder.filter(pid => players[pid].status === 'active').every(pid => pid === playerId);
 
@@ -385,7 +398,7 @@ function TargetPicker({ type, card, players, playerOrder, playerId, onSelect }) 
         {/* Card + icon column */}
         <div className="fhtarget-picker-card-col">
           <Typography sx={{ color: theme.accent, fontSize: 28, lineHeight: 1 }}>{theme.icon}</Typography>
-          {card && <FlippingHusksCard card={card} />}
+          {card && <FlippingHusksCard card={card} small={isMobile} />}
         </div>
 
         {/* Content column */}

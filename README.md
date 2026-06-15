@@ -2,6 +2,33 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Running Locally
+
+The app has two parts: the **backend** (Express + Socket.IO game server on port `3001`) and the **frontend** (React dev server on port `3000`). Both need to be running. Use two terminals.
+
+First, install dependencies for both (one-time):
+
+```bash
+npm install            # frontend deps (run in the project root)
+cd server && npm install && cd ..   # backend deps
+```
+
+### Terminal 1 — backend
+
+```bash
+npm run server         # node server/index.js  → http://localhost:3001
+# or, with auto-restart on changes (nodemon):
+npm run server:dev
+```
+
+### Terminal 2 — frontend
+
+```bash
+npm start              # http://localhost:3000 (hot reload)
+```
+
+Then open [http://localhost:3000](http://localhost:3000). In development the frontend connects to the backend at `http://localhost:3001/flippinghusks`.
+
 ## Available Scripts
 
 In the project directory, you can run:

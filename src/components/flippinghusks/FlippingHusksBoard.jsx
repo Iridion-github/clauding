@@ -169,7 +169,7 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
       {phase === 'round_end' && !animating && (
         <NextRoundCountdown
           deadline={nextRoundDeadline}
-          totalMs={10000}
+          totalMs={5000}
           onExpire={voteNextRound}
         />
       )}

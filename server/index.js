@@ -107,7 +107,7 @@ const fh = io.of('/flippinghusks');
 // When a round ends, every player no longer has to press "Next Round" for the
 // game to continue: a shared countdown auto-advances the round. All clients get
 // the same absolute `deadline` so they can render a synchronized countdown bar.
-const NEXT_ROUND_COUNTDOWN_MS = 10000;
+const NEXT_ROUND_COUNTDOWN_MS = 5000;
 
 function clearNextRoundTimer(room) {
   if (room && room.nextRoundTimer) {

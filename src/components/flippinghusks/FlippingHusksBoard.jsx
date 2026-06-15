@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Chip, Stack, Typography, Box, useMediaQuery } from '@mui/material';
-import AcUnitIcon from '@mui/icons-material/AcUnit';
-import AutorenewIcon from '@mui/icons-material/Autorenew';
+import { Chip, Stack, Typography, Box, useMediaQuery } from '@mui/material';
 import { FlippingHusksCard } from './FlippingHusksCard';
 import './FlippingHusksBoard.css';
 
@@ -93,7 +91,11 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
                     </Typography>
                   </Stack>
                   <div className="fhopponent-cards">
-                    {p.cards.map(card => <FlippingHusksCard key={card.id} card={card} small />)}
+                    {p.cards.map(card => (
+                      <div className="fhmini-card" key={card.id}>
+                        <FlippingHusksCard card={card} small />
+                      </div>
+                    ))}
                     {p.cards.length === 0 && (
                       <Typography variant="caption" color="text.secondary" fontStyle="italic">No cards</Typography>
                     )}
@@ -128,7 +130,11 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
               </Typography>
             </div>
             <div className="fhboard-me-cards">
-              {self?.cards.map(card => <FlippingHusksCard key={card.id} card={card} />)}
+              {self?.cards.map(card => (
+                <div className="fhme-card" key={card.id}>
+                  <FlippingHusksCard card={card} />
+                </div>
+              ))}
               {self?.cards.length === 0 && (
                 <Typography variant="caption" color="text.secondary" fontStyle="italic">
                   No cards yet this round
@@ -166,9 +172,10 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
       )}
 
       {/* ── Auto-advance countdown bar at top (round over → nobody can act) ─── */}
+      {/* Rendered only once animations finish (the !animating gate), so the
+          countdown starts *after* the round-ending animation, not during it. */}
       {phase === 'round_end' && !animating && (
         <NextRoundCountdown
-          deadline={nextRoundDeadline}
           totalMs={5000}
           onExpire={voteNextRound}
         />
@@ -369,13 +376,13 @@ function PlayAgainModal({ votes, players }) {
 }
 
 // ── Next Round countdown bar ────────────────────────────────────────────────────
-// Shown at the top once a round ends (no player can hit/stay anymore). Prefers the
-// server's shared deadline for cross-player sync, but falls back to a local 10s
-// timer so the bar always appears. When it reaches zero it calls onExpire (cast
-// this player's "Next Round" vote): once every client has expired/voted the server
-// advances the round — so nobody is ever left stuck waiting.
-function NextRoundCountdown({ deadline, totalMs, onExpire }) {
-  const [target] = useState(() => deadline ?? Date.now() + totalMs);
+// Mounted only once the round-ending animations have finished, so the countdown
+// starts from THIS moment (animation-end) rather than from when the round ended on
+// the server. When it reaches zero it calls onExpire (casts this player's "Next
+// Round" vote): once every client has expired/voted the server advances the round.
+// Clients animate the same things, so their post-animation countdowns stay in sync.
+function NextRoundCountdown({ totalMs, onExpire }) {
+  const [target] = useState(() => Date.now() + totalMs);
   const [now, setNow] = useState(() => Date.now());
   const firedRef = useRef(false);
 

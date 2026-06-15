@@ -136,9 +136,9 @@ function applyCard(state, playerId, card, opts = {}) {
 
     case 'flip_three':
       if (auto) {
-        player.cards.push(card);
         log(state, `${player.name} drew Flip Three — drawing 3 more!`);
         drawN(state, playerId, 3, { auto: true });
+        state.discardPile.push(card); // spent — discard, don't keep it in the hand
       } else {
         state.pendingAction = { type: 'flip_three', drawerId: playerId, card };
         log(state, `${player.name} drew Flip Three — choose a target!`);
@@ -186,13 +186,16 @@ function resolveFlipThree(state, drawerId, targetId) {
   const target = state.players[targetId];
   if (!target || target.status !== 'active') return false;
 
-  target.cards.push(pa.card);
   state.pendingAction = null;
 
   const who = drawerId === targetId ? 'themselves' : target.name;
   log(state, `${state.players[drawerId].name} played Flip Three on ${who} — 3 forced cards!`);
 
   drawN(state, targetId, 3, { auto: true });
+
+  // The Flip Three card is spent once its effect resolves — discard it instead of
+  // leaving it in front of the player who received the effect.
+  state.discardPile.push(pa.card);
 
   return true;
 }

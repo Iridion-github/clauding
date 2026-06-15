@@ -3,9 +3,6 @@ const http = require('http');
 const { Server } = require('socket.io');
 const fs   = require('fs');
 const path = require('path');
-const { createGameState } = require('./game/GameState');
-const { applyAction } = require('./game/GameEngine');
-const { buildDeck } = require('./game/Cards');
 const { createGame: createFlippingHusksGame, resetGame: resetFlippingHusksGame } = require('./flippinghusks/GameState');
 const { applyAction: applyFlippingHusksAction } = require('./flippinghusks/GameEngine');
 
@@ -15,88 +12,6 @@ const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
 });
 
-// rooms: { roomId: { players: [{id, name, color}], state } }
-const rooms = {};
-// socketToRoom: { socketId: { roomId, playerId } }
-const socketToRoom = {};
-
-io.on('connection', (socket) => {
-  console.log('Connected:', socket.id);
-
-  // Join or create a room
-  socket.on('join_room', ({ roomId, playerName, deckName }) => {
-    if (!rooms[roomId]) {
-      rooms[roomId] = { players: [], state: null };
-    }
-    const room = rooms[roomId];
-
-    if (room.players.length >= 2) {
-      socket.emit('error', { message: 'Room is full.' });
-      return;
-    }
-
-    const alreadyIn = room.players.find(p => p.socketId === socket.id);
-    if (alreadyIn) {
-      socket.emit('error', { message: 'Already in room.' });
-      return;
-    }
-
-    const playerId = socket.id;
-    room.players.push({ socketId: socket.id, id: playerId, name: playerName, deckName: deckName || 'mono_red' });
-    socketToRoom[socket.id] = { roomId, playerId };
-    socket.join(roomId);
-
-    socket.emit('joined_room', { roomId, playerId });
-    io.to(roomId).emit('room_update', { players: room.players.map(p => ({ id: p.id, name: p.name })) });
-
-    // Start game when both players are in
-    if (room.players.length === 2) {
-      const [p1, p2] = room.players;
-      room.state = createGameState(
-        p1.id, p1.name, buildDeck(p1.deckName),
-        p2.id, p2.name, buildDeck(p2.deckName),
-      );
-      io.to(roomId).emit('game_started', { state: sanitizeState(room.state) });
-    }
-  });
-
-  socket.on('game_action', ({ action }) => {
-    const meta = socketToRoom[socket.id];
-    if (!meta) { socket.emit('error', { message: 'Not in a room.' }); return; }
-
-    const room = rooms[meta.roomId];
-    if (!room || !room.state) { socket.emit('error', { message: 'Game not started.' }); return; }
-
-    const result = applyAction(room.state, meta.playerId, action);
-    if (!result.ok) {
-      socket.emit('action_rejected', { error: result.error });
-      return;
-    }
-
-    room.state = result.state;
-    io.to(meta.roomId).emit('state_update', { state: sanitizeState(room.state) });
-  });
-
-  socket.on('disconnect', () => {
-    const meta = socketToRoom[socket.id];
-    if (meta) {
-      const room = rooms[meta.roomId];
-      if (room) {
-        room.players = room.players.filter(p => p.socketId !== socket.id);
-        io.to(meta.roomId).emit('player_disconnected', { playerId: meta.playerId });
-        if (room.players.length === 0) delete rooms[meta.roomId];
-      }
-      delete socketToRoom[socket.id];
-    }
-    console.log('Disconnected:', socket.id);
-  });
-});
-
-// Hide opponent's hand and library contents from each player's state view
-function sanitizeState(state) {
-  return state; // Full state for now; add per-player views when needed
-}
-
 // ── Flipping Husks namespace ────────────────────────────────────────────────────────
 // fhRooms: { roomId: { hostId, players:[{socketId,id,name}], state } }
 const fhRooms = {};
@@ -104,10 +19,13 @@ const fhSocketToRoom = {};
 
 const fh = io.of('/flippinghusks');
 
-// When a round ends, every player no longer has to press "Next Round" for the
-// game to continue: a shared countdown auto-advances the round. All clients get
-// the same absolute `deadline` so they can render a synchronized countdown bar.
-const NEXT_ROUND_COUNTDOWN_MS = 5000;
+// The visible "next round" countdown is driven CLIENT-side and only starts once a
+// client's round-ending animations finish (animation-end + 5s), at which point the
+// client auto-casts its next-round vote and the room advances on the all-voted path.
+// This server timer is just a backstop for a client that never reports back — keep
+// it comfortably longer than the longest animation + the countdown so it can never
+// pre-empt the real, animation-aware countdown.
+const NEXT_ROUND_COUNTDOWN_MS = 30000;
 
 function clearNextRoundTimer(room) {
   if (room && room.nextRoundTimer) {

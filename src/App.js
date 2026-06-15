@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import theme from './theme';
 import { Hub } from './pages/Hub';
-import { MTGApp } from './pages/MTGApp';
 import { FlippingHusksApp } from './pages/FlippingHusksApp';
 
 function App() {
@@ -12,7 +11,6 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Hub />} />
-          {/* <Route path="/mtg"   element={<MTGApp />} /> */}
           <Route path="/flippinghusks" element={<FlippingHusksApp />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

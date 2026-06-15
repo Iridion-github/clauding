@@ -11,7 +11,7 @@ export function FlippingHusksApp() {
   const {
     connected, playerId, isHost, hostId,
     roomPlayers, gameState,
-    isMyTurn, self,
+    isMyTurn,
     error, actionError,
     animQueue, advanceAnim,
     playAgainVotes, votePlayAgain,

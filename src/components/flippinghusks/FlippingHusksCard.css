@@ -10,6 +10,9 @@
   flex-direction: column;
   overflow: hidden;
   position: relative;
+  /* Own stacking context so the inner frame (z-index:1) / numeral (z-index:2) stay
+     contained — otherwise a lower card's frame paints over an overlapping card. */
+  isolation: isolate;
   flex-shrink: 0;
   user-select: none;
   cursor: default;
@@ -67,7 +70,7 @@
 /* ── Number card ─────────────────────────────────────────────────────────────── */
 .fhcard-number {
   background: #fffde7;
-  padding: 18px 18px 0;
+  padding: 18px;
 }
 
 /* ── Score card (modifier / multiplier) ──────────────────────────────────────── */
@@ -137,24 +140,36 @@
   justify-content: center;
 }
 
-/* ── Word box (bottom label on number cards) ──────────────────────────────────── */
-.fhcard-wordbox {
-  position: relative;
+/* ── Corner index numbers (top-left + bottom-right, like a playing card) ───────── */
+/* Smaller than the centre numeral, a plain sans-serif for legibility, same colour. */
+.fhcard-corner {
+  position: absolute;
   z-index: 2;
-  margin: 0 4px 18px;
-  background: rgba(255,255,255,0.88);
-  border-radius: 4px;
-  padding: 2px 4px;
-  text-align: center;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.08);
+  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif;
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: -1px;
+  line-height: 1;
+  color: var(--vine, #888);
+  user-select: none;
+  pointer-events: none;
+}
+.fhcard-corner-tl { top: 9px; left: 10px; }
+.fhcard-corner-br { bottom: 9px; right: 10px; }
+
+/* Card 0 is rainbow in the centre — match it in the corners. */
+.fhcard-corner-rb {
+  background: linear-gradient(to bottom, #ff3333, #ff9900, #ffee00, #33cc33, #3399ff, #cc33ff, #ff3399);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
 }
 
-.fhcard-word {
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  color: #333;
-}
+/* Small-card variant */
+.fhcard-small .fhcard-corner    { font-size: 12px; letter-spacing: -0.5px; }
+.fhcard-small .fhcard-corner-tl { top: 5px; left: 6px; }
+.fhcard-small .fhcard-corner-br { bottom: 5px; right: 6px; }
 
 /* ── Double-outlined big number ───────────────────────────────────────────────── */
 .fhcard-bignum {

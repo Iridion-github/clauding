@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Button, TextField, Typography, Stack,
-  List, ListItem, ListItemText, Chip, Divider, Alert,
+  List, ListItem, ListItemText, Chip, Alert,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import StarIcon from '@mui/icons-material/Star';

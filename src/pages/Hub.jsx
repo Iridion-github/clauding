@@ -4,13 +4,6 @@ import {
 } from '@mui/material';
 
 const PROJECTS = [
-  // {
-  //   id: 'mtg',
-  //   title: 'Magic the Gathering Simulator',
-  //   description: 'Networked 1v1 card game based on the famous TCG.',
-  //   status: 'WIP',
-  //   path: '/mtg',
-  // },
   {
     id: 'flippinghusks',
     title: 'Flipping Husks',

@@ -2,7 +2,6 @@ import { useId } from 'react';
 import './FlippingHusksCard.css';
 
 const VINE = [null,'#9e9e9e','#aed136','#e91e63','#26c6da','#00897b','#6a1b9a','#8d6e63','#43a047','#f57c00','#c62828','#1565c0','#455a64'];
-const WORDS = ['ZERO','ONE','TWO','THREE','FOUR','FIVE','SIX','SEVEN','EIGHT','NINE','TEN','ELEVEN','TWELVE'];
 const RAINBOW_STOPS = ['#ff3333','#ff9900','#ffee00','#33cc33','#3399ff','#cc33ff','#ff3399'];
 
 export function FlippingHusksCard({ card, faceDown = false, small = false, highlight = false }) {
@@ -31,20 +30,19 @@ function CardBack({ small }) {
 function NumberCard({ card, small, highlight }) {
   const isRainbow = card.value === 0;
   const vine = VINE[card.value] ?? '#888';
+  const num  = String(card.value);
+  const corner = `fhcard-corner${isRainbow ? ' fhcard-corner-rb' : ''}`;
   return (
     <div
       className={`fhcard fhcard-number${small ? ' fhcard-small' : ''}${highlight ? ' fhcard-highlight' : ''}`}
       style={{ '--vine': vine }}
     >
-      <VineBorder vine={vine} isRainbow={isRainbow} />
+      <VineBorder vine={vine} isRainbow={isRainbow} cut />
+      <span className={`${corner} fhcard-corner-tl`} aria-hidden="true">{num}</span>
       <div className="fhcard-nbody">
-        <BigNum value={String(card.value)} vine={vine} isRainbow={isRainbow} big />
+        <BigNum value={num} vine={vine} isRainbow={isRainbow} big />
       </div>
-      {!small && (
-        <div className="fhcard-wordbox">
-          <span className="fhcard-word">{WORDS[card.value]}</span>
-        </div>
-      )}
+      <span className={`${corner} fhcard-corner-br`} aria-hidden="true">{num}</span>
     </div>
   );
 }
@@ -138,7 +136,7 @@ const MAYAN_INNER = [
   'L130,10 L120,10 Z',
 ].join(' ');
 
-function VineBorder({ vine, isRainbow, outlineColor }) {
+function VineBorder({ vine, isRainbow, outlineColor, cut }) {
   const uid = useId().replace(/:/g, '');
   const gid = `fhvg${uid}`;
   const outerPath = rrCW(4, 4, 132, 192, 10); // rounded outer boundary
@@ -164,16 +162,20 @@ function VineBorder({ vine, isRainbow, outlineColor }) {
         stroke={stroke}
         strokeWidth={sw}
       />
+      {cut && (
+        // Slice the frame off the upper-left and lower-right corners (fill with the
+        // number-card background) so the corner index numbers have clear space.
+        <g fill="#fffde7">
+          <path d="M2,2 L46,2 L2,46 Z" />
+          <path d="M138,198 L94,198 L138,154 Z" />
+        </g>
+      )}
     </svg>
   );
 }
 
 function rrCW(x, y, w, h, r) {
   return `M${x+r},${y} L${x+w-r},${y} Q${x+w},${y} ${x+w},${y+r} L${x+w},${y+h-r} Q${x+w},${y+h} ${x+w-r},${y+h} L${x+r},${y+h} Q${x},${y+h} ${x},${y+h-r} L${x},${y+r} Q${x},${y} ${x+r},${y} Z`;
-}
-
-function rrCCW(x, y, w, h, r) {
-  return `M${x+r},${y} Q${x},${y} ${x},${y+r} L${x},${y+h-r} Q${x},${y+h} ${x+r},${y+h} L${x+w-r},${y+h} Q${x+w},${y+h} ${x+w},${y+h-r} L${x+w},${y+r} Q${x+w},${y} ${x+w-r},${y} Z`;
 }
 
 // ─── Double-outlined number ─────────────────────────────────────────────────────

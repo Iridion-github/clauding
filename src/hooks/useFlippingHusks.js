@@ -195,7 +195,6 @@ export function useFlippingHusks() {
   }, []);
 
   const advanceAnim   = useCallback(() => setAnimQueue(q => q.slice(1)), []);
-  const clearAnimQueue = useCallback(() => setAnimQueue([]), []);
   const votePlayAgain   = useCallback(() => socketRef.current?.emit('fh_play_again'), []);
   const voteNextRound   = useCallback(() => socketRef.current?.emit('fh_next_round_vote'), []);
 
@@ -207,7 +206,7 @@ export function useFlippingHusks() {
     roomPlayers, gameState,
     isMyTurn, self,
     error, actionError,
-    animQueue, advanceAnim, clearAnimQueue,
+    animQueue, advanceAnim,
     playAgainVotes, votePlayAgain,
     nextRoundVotes, voteNextRound, nextRoundDeadline,
     joinRoom, startGame, sendAction,

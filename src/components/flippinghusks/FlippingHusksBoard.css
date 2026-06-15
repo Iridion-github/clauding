@@ -53,6 +53,9 @@
   min-height: 60px;
   align-items: flex-start;
 }
+/* Wrapper around each opponent card — a passthrough on desktop; shrinks + overlaps
+   on mobile (see the media query below). */
+.fhmini-card { flex: 0 0 auto; line-height: 0; }
 
 /* ── My player area (centered, takes remaining space) ────────────────────────── */
 .fhboard-me-wrap {
@@ -83,6 +86,9 @@
   min-height: 210px;
   align-items: flex-start;
 }
+/* Wrapper around each of your own cards — passthrough on desktop; shrinks + overlaps
+   on mobile (see the media query below). */
+.fhme-card { flex: 0 0 auto; line-height: 0; }
 
 /* ── Fixed action bar ────────────────────────────────────────────────────────── */
 .fhaction-bar {
@@ -507,6 +513,7 @@
     padding-top: 34px;
     padding-bottom: calc(112px + env(safe-area-inset-bottom));
     gap: 8px;
+    overflow-x: hidden;   /* a full 5-card row can overhang a few px on narrow phones */
   }
 
   /* Compact header: smaller title so the chips fit alongside it */
@@ -515,18 +522,47 @@
   /* Shrink my-area chrome so the cards get the room, not the padding */
   .fhboard-me        { padding: 12px 12px; border-radius: 12px; }
   .fhboard-me-header { gap: 6px; margin-bottom: 10px; }
-  .fhboard-me-cards  { min-height: 120px; gap: 8px; justify-content: center; }
+  /* Own hand: up to 5 overlapped cards per row, then wrap to a new row below.
+     A grid (not flex) gives a true 5-per-row cap; each card overflows its column
+     to the right to create the overlap, so wrapped rows start cleanly at the left
+     edge with no negative-margin artifacts. */
+  .fhboard-me-cards { min-height: 134px; gap: 0; justify-content: center; }
+  .fhboard-me-cards:has(.fhme-card) {
+    display: grid;
+    grid-template-columns: repeat(5, 63px);  /* column = the 33%-overlap step (94px − 31px) */
+    justify-content: start;
+    row-gap: 8px;
+  }
+  .fhme-card { width: 94px; height: 134px; }   /* 67% of 140×200 (−33%); overflows its 63px column → 33% overlap */
+  .fhme-card .fhcard,
+  .fhme-card .fhcard:hover { transform: scale(0.67); transform-origin: top left; }
+  .fhme-card .fhcard { box-shadow: -4px 0 6px -2px rgba(0, 0, 0, 0.5); }  /* clean seam */
 
-  /* Opponents: even grid so a lone last player doesn't stretch full-width.
-     auto-fill keeps columns ≥150px → 2 per row on phones, 3+ on wider screens. */
+  /* Your own hand goes first (above opponents) so you can read your cards without
+     scrolling; opponents follow below. */
+  .fhboard-header    { order: 0; }
+  .fhboard-me-wrap   { order: 1; flex: 0 0 auto; }
+  .fhboard-opponents { order: 2; }
+
+  /* Opponents: one full-width row each so the overlapped mini-hand has room */
   .fhboard-opponents {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: 1fr;
     gap: 8px;
     align-items: start;
   }
   .fhopponent        { min-width: 0; padding: 8px 10px; }
-  .fhopponent-cards  { gap: 4px; min-height: 0; margin-top: 6px; }
+
+  /* Opponent cards: half the size, overlapped. Each later card sits on top and is
+     shifted right just enough to reveal the previous card's top-left corner number. */
+  .fhopponent-cards  { flex-wrap: nowrap; gap: 0; min-height: 52px; margin-top: 6px; }
+  .fhmini-card       { width: 36px; height: 52px; }   /* half of the 72×104 small card */
+  .fhmini-card .fhcard,
+  .fhmini-card .fhcard:hover { transform: scale(0.5); transform-origin: top left; }
+  /* Shadow on the overlapping (left) edge so the card below doesn't bleed through
+     the top card's rounded corners at the seam. */
+  .fhmini-card .fhcard { box-shadow: -5px 0 6px -2px rgba(0, 0, 0, 0.55); }
+  .fhmini-card + .fhmini-card { margin-left: -9px; }  /* ~25% of the 36px card covered */
 
   /* Bigger, clearer log toggle — comfortable tap target with readable text */
   .fhlog-toggle {

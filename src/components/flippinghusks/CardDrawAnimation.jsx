@@ -56,6 +56,8 @@ export function CardDrawAnimation({ card, isBust, isFlippingHusks, secondChanceC
       t.push(setTimeout(() => onDoneRef.current(), 5000));
     }
     return () => t.forEach(clearTimeout);
+    // card/isFlippingHusks are fixed for this animation's lifetime — intentionally omitted
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isBust, secondChanceCard]);
 
   const faceDown   = phase === 'falling' || phase === 'flip-out';

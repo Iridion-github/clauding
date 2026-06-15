@@ -8,6 +8,24 @@ import './FlippingHusksBoard.css';
 const STATUS_COLOR = { active: 'default', stayed: 'success', busted: 'error', flippinghusks: 'primary' };
 const STATUS_LABEL = { active: 'Playing', stayed: 'Stayed', busted: 'Bust!', flippinghusks: 'Flipping Husks!' };
 
+// Live round score / unique count for a player (mirrors the server's scoring rules).
+function calcDisplay(player) {
+  if (player.status === 'busted') return { score: 0, uniq: 0, fh: false };
+  const nums    = player.cards.filter(c => c.type === 'number');
+  const numSum  = nums.reduce((s, c) => s + c.value, 0);
+  const hasMult = player.cards.some(c => c.type === 'multiplier');
+  const modSum  = player.cards.filter(c => c.type === 'modifier').reduce((s, c) => s + c.value, 0);
+  const uniq    = new Set(nums.map(c => c.value)).size;
+  const fh      = uniq >= 7;
+  return { score: (hasMult ? numSum * 2 : numSum) + modSum + (fh ? 15 : 0), uniq, fh };
+}
+
+// Cap very long names so headers and (especially) the target buttons stay aligned.
+function truncateName(name, max = 16) {
+  if (!name) return '';
+  return name.length > max ? name.slice(0, max - 1) + '…' : name;
+}
+
 export function FlippingHusksBoard({ gameState, playerId, connected = true, roomPlayers = [], isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain, nextRoundVotes, voteNextRound, nextRoundDeadline, animating }) {
   const { players, playerOrder, activePlayerId, phase, round, drawPile, discardCount, log, winner, pendingAction } = gameState;
   const offlineIds = new Set(roomPlayers.filter(p => p.connected === false).map(p => p.id));
@@ -25,17 +43,6 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [log]);
-
-  function calcDisplay(player) {
-    if (player.status === 'busted') return { score: 0, uniq: 0, fh: false };
-    const nums    = player.cards.filter(c => c.type === 'number');
-    const numSum  = nums.reduce((s, c) => s + c.value, 0);
-    const hasMult = player.cards.some(c => c.type === 'multiplier');
-    const modSum  = player.cards.filter(c => c.type === 'modifier').reduce((s, c) => s + c.value, 0);
-    const uniq    = new Set(nums.map(c => c.value)).size;
-    const fh      = uniq >= 7;
-    return { score: (hasMult ? numSum * 2 : numSum) + modSum + (fh ? 15 : 0), uniq, fh };
-  }
 
   return (
     <div className="fhboard">
@@ -77,7 +84,7 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
               return (
                 <div key={pid} className={`fhopponent${isActive ? ' active' : ''}`}>
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-                    <Typography variant="body2" fontWeight="bold">{p.name}</Typography>
+                    <Typography variant="body2" fontWeight="bold">{truncateName(p.name)}</Typography>
                     <Chip label={STATUS_LABEL[p.status]} color={STATUS_COLOR[p.status]} size="small" />
                     {offlineIds.has(pid) && <Chip label="offline" size="small" variant="outlined" />}
                     {isActive && <Chip label="▶" size="small" color="warning" variant="outlined" />}
@@ -106,7 +113,7 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
           <div className="fhboard-me">
             <div className="fhboard-me-header">
               <Typography variant="body1" fontWeight="bold" color="secondary.main">
-                {self?.name} (you)
+                {truncateName(self?.name)} (you)
               </Typography>
               <Chip label={STATUS_LABEL[self?.status]} color={STATUS_COLOR[self?.status]} size="small" />
               {activePlayerId === playerId && phase === 'playing' && (
@@ -148,9 +155,14 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
         <div className="fhturn-banner">⚡ Your Turn</div>
       )}
 
-      {/* ── Connection-lost banner (this player is offline / reconnecting) ──── */}
+      {/* ── Connection-lost modal (blocks all interaction while reconnecting) ── */}
       {!connected && (
-        <div className="fhreconnect-banner">⚠ Connection lost — reconnecting…</div>
+        <div className="fhreconnect-overlay">
+          <div className="fhreconnect-box">
+            <div className="fhreconnect-spinner" />
+            <div className="fhreconnect-text">Attempting to reconnect</div>
+          </div>
+        </div>
       )}
 
       {/* ── Auto-advance countdown bar at top (round over → nobody can act) ─── */}
@@ -196,6 +208,8 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
           playerOrder={playerOrder}
           playerId={playerId}
           isMobile={isMobile}
+          deckCount={drawPile.length}
+          usedCount={discardCount ?? 0}
           onSelect={targetId => {
             const actionType = pendingAction.type === 'freeze' ? 'RESOLVE_FREEZE' : 'RESOLVE_FLIP_THREE';
             sendAction({ type: actionType, targetId });
@@ -264,7 +278,7 @@ function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePla
     return (
       <div className="fhaction-bar">
         <Typography className="fhaction-status">
-          Waiting for {players[activePlayerId]?.name ?? '…'} to act…
+          Waiting for {truncateName(players[activePlayerId]?.name) || '…'} to act…
           {activePlayerOffline && ' (reconnecting…)'}
         </Typography>
       </div>
@@ -308,7 +322,7 @@ function Scoreboard({ players, playerOrder, final = false }) {
           const p = players[pid];
           return (
             <Chip key={pid}
-              label={`${i + 1}. ${p.name}  +${p.roundScore ?? 0} → ${p.totalScore}`}
+              label={`${i + 1}. ${truncateName(p.name)}  +${p.roundScore ?? 0} → ${p.totalScore}`}
               color={i === 0 ? 'primary' : 'default'}
               variant={i === 0 ? 'filled' : 'outlined'}
               size="small"
@@ -393,7 +407,7 @@ function NextRoundCountdown({ deadline, totalMs, onExpire }) {
   );
 }
 
-function TargetPicker({ type, card, players, playerOrder, playerId, isMobile, onSelect }) {
+function TargetPicker({ type, card, players, playerOrder, playerId, isMobile, deckCount, usedCount, onSelect }) {
   const theme = PICKER_THEME[type] ?? PICKER_THEME.freeze;
   const onlySelf = playerOrder.filter(pid => players[pid].status === 'active').every(pid => pid === playerId);
 
@@ -402,11 +416,16 @@ function TargetPicker({ type, card, players, playerOrder, playerId, isMobile, on
       className="fhtarget-picker"
       style={{ '--picker-border': theme.border, '--picker-glow': theme.glow }}
     >
+      {/* Deck status — first info at the top of the modal */}
+      <div className="fhtarget-picker-deck">
+        <span>Cards in deck: <b>{deckCount}</b></span>
+        <span>Cards used: <b>{usedCount}</b></span>
+      </div>
+
       <div className="fhtarget-picker-inner">
 
-        {/* Card + icon column */}
+        {/* Card column — card centered, no standalone icon */}
         <div className="fhtarget-picker-card-col">
-          <Typography sx={{ color: theme.accent, fontSize: 28, lineHeight: 1 }}>{theme.icon}</Typography>
           {card && <FlippingHusksCard card={card} small={isMobile} />}
         </div>
 
@@ -420,11 +439,12 @@ function TargetPicker({ type, card, players, playerOrder, playerId, isMobile, on
           </div>
           <p className="fhtarget-picker-hint">{theme.hint}</p>
 
-          <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div className="fhtarget-btns">
             {playerOrder.map(pid => {
               const p = players[pid];
               const isSelf = pid === playerId;
               const done   = p.status !== 'active';
+              const round  = calcDisplay(p).score;
               return (
                 <button
                   key={pid}
@@ -437,14 +457,25 @@ function TargetPicker({ type, card, players, playerOrder, playerId, isMobile, on
                     color: done ? '#666' : theme.accent,
                   }}
                 >
-                  {theme.icon}
-                  {p.name}
-                  {isSelf && ' (you)'}
-                  {done && <span className="fhtarget-btn-status"> {p.status === 'stayed' ? '✓stayed' : '✗bust'}</span>}
+                  <span className="fhtarget-btn-head">
+                    <span className="fhtarget-btn-icon">{theme.icon}</span>
+                    <span className="fhtarget-btn-name">
+                      {truncateName(p.name)}{isSelf && ' (you)'}
+                    </span>
+                    {done && (
+                      <span className="fhtarget-btn-status">
+                        {p.status === 'stayed' ? '✓ stayed' : '✗ bust'}
+                      </span>
+                    )}
+                  </span>
+                  <span className="fhtarget-btn-scores">
+                    <span className="fhtarget-btn-score">Total Points: <b>{p.totalScore}</b></span>
+                    <span className="fhtarget-btn-score">Round Points: <b>{round}</b></span>
+                  </span>
                 </button>
               );
             })}
-          </Stack>
+          </div>
         </div>
 
       </div>
@@ -462,7 +493,7 @@ function ObserverModal({ drawerName, type, card }) {
         {card && <FlippingHusksCard card={card} small />}
         <Box>
           <Typography variant="body2" fontWeight="bold" color="warning.main">
-            {drawerName} drew {TYPE_LABEL[type] ?? type}
+            {truncateName(drawerName)} drew {TYPE_LABEL[type] ?? type}
           </Typography>
           <Typography variant="caption" color="text.secondary">
             …and is choosing who to target.

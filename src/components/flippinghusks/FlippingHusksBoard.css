@@ -184,20 +184,47 @@
   z-index: 200;
 }
 
-/* ── Connection-lost banner (this client is offline / reconnecting) ──────────── */
-.fhreconnect-banner {
+/* ── Connection-lost modal (this client is offline / reconnecting) ───────────── */
+/* Full-screen blocking overlay above everything — no button is clickable while up. */
+.fhreconnect-overlay {
   position: fixed;
-  top: 0;
+  top: 72px;                           /* leave the header (round / deck / used) visible */
   left: 0;
-  right: 300px;          /* leave room for the log sidebar on desktop */
-  text-align: center;
-  padding: 7px 0;
-  font-size: 13px;
+  right: 0;
+  bottom: 0;
+  z-index: 9000;                       /* above all other overlays / animations */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 9, 14, 0.82);
+  backdrop-filter: blur(5px);
+  pointer-events: all;                 /* swallow every click */
+  cursor: wait;
+}
+.fhreconnect-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  padding: 36px 44px;
+}
+.fhreconnect-spinner {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 6px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #f0c040;
+  animation: fh-reconnect-spin 0.9s linear infinite;
+}
+@keyframes fh-reconnect-spin {
+  to { transform: rotate(360deg); }
+}
+.fhreconnect-text {
+  font-size: 18px;
   font-weight: bold;
   letter-spacing: 1px;
-  color: #fff;
-  background: #b71c1c;
-  z-index: 400;          /* above the turn banner / countdown */
+  color: #f0c040;
+  text-shadow: 0 0 18px rgba(240, 192, 64, 0.4);
 }
 
 /* ── Next-round auto-advance countdown bar ───────────────────────────────────── */
@@ -296,6 +323,18 @@
   animation: fh-picker-glow 2s ease-in-out infinite;
 }
 
+/* Deck status row — first info at the top of the picker */
+.fhtarget-picker-deck {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  color: #cfcfcf;
+  flex-shrink: 0;
+}
+.fhtarget-picker-deck b { color: #fff; font-weight: bold; }
+
 .fhtarget-picker-inner {
   display: flex;
   gap: 24px;
@@ -331,30 +370,68 @@
   line-height: 1.4;
 }
 
+/* Even grid → every target button is the same size, perfectly aligned */
+.fhtarget-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
 .fhtarget-btn {
-  padding: 10px 18px;
-  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 12px;
   border: 2px solid;
   cursor: pointer;
   font-family: 'Georgia', serif;
-  font-size: 15px;
-  font-weight: bold;
+  text-align: left;
+  min-width: 0;
   transition: transform 0.12s, box-shadow 0.12s;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 .fhtarget-btn:hover:not(:disabled) {
   transform: translateY(-2px);
 }
 .fhtarget-btn:disabled {
   cursor: not-allowed;
-  opacity: 0.45;
+  opacity: 0.5;
+}
+
+.fhtarget-btn-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.fhtarget-btn-icon {
+  flex-shrink: 0;
+  font-size: 16px;
+  line-height: 1;
+}
+.fhtarget-btn-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .fhtarget-btn-status {
+  flex-shrink: 0;
   font-size: 11px;
-  opacity: 0.6;
+  opacity: 0.75;
   font-weight: normal;
+}
+.fhtarget-btn-scores {
+  display: flex;
+  gap: 14px;
+  font-size: 13px;
+  font-weight: normal;
+  opacity: 0.92;
 }
 
 /* ── Play Again modal ────────────────────────────────────────────────────────── */
@@ -468,7 +545,8 @@
   }
   .fhturn-banner      { right: 0; }
   .fhcountdown-bar    { right: 0; }
-  .fhreconnect-banner { right: 0; }
+  /* Header sits lower on mobile (bigger top padding + possible two-row wrap) */
+  .fhreconnect-overlay { top: 92px; }
 
   /* Buttons fill the bar; text stays large and legible */
   .fhaction-btn {
@@ -516,18 +594,20 @@
   }
 
   /* Target picker — full width, just above action bar */
+  /* Full-screen modal with a little padding around the edges */
   .fhtarget-picker {
-    left: 8px;
-    right: 8px;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    transform: none;
     width: auto;
     max-width: none;
-    bottom: calc(94px + env(safe-area-inset-bottom));
+    max-height: none;
     padding: 16px 14px;
-    /* With up to 6 target buttons + the card, keep it on-screen and scroll if needed */
-    max-height: calc(100vh - 94px - env(safe-area-inset-bottom) - 12px);
-    max-height: calc(100dvh - 94px - env(safe-area-inset-bottom) - 12px);
     overflow-y: auto;
   }
+  .fhtarget-picker-deck { font-size: 15px; gap: 18px; margin-bottom: 16px; }
   .fhtarget-picker-inner {
     flex-direction: column;
     align-items: center;
@@ -549,14 +629,11 @@
     font-size: 19px;
   }
 
-  /* Target buttons: large tap targets, readable labels */
-  .fhtarget-btn {
-    flex: 1 1 140px;
-    min-height: 52px;
-    justify-content: center;
-    font-size: 16px;
-    padding: 10px 14px;
-  }
+  /* One button per row → large, easy to read, perfectly aligned */
+  .fhtarget-btns { grid-template-columns: 1fr; gap: 10px; }
+  .fhtarget-btn  { min-height: 56px; padding: 13px 16px; }
+  .fhtarget-btn-name   { font-size: 17px; }
+  .fhtarget-btn-scores { font-size: 14px; }
 
   /* Observer modal — full width */
   .fhobserver-modal {

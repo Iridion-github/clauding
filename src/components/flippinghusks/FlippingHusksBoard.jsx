@@ -79,6 +79,7 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
               const p = players[pid];
               const isActive = pid === activePlayerId && phase === 'playing';
               const { score, uniq } = calcDisplay(p);
+              const toWin = Math.max(0, 200 - (p.totalScore ?? 0) - score);
               return (
                 <div key={pid} className={`fhopponent${isActive ? ' active' : ''}`}>
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
@@ -101,7 +102,7 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
                     )}
                   </div>
                   <Typography variant="caption" color="text.secondary">
-                    +{score} pts · {uniq}/7 unique
+                    +{score} this round ({toWin} to 200) · {uniq}/7 unique
                     {p.secondChances > 0 && ` · ★×${p.secondChances}`}
                   </Typography>
                 </div>

@@ -516,9 +516,6 @@
     overflow-x: hidden;   /* a full 5-card row can overhang a few px on narrow phones */
   }
 
-  /* Compact header: smaller title so the chips fit alongside it */
-  .fhboard-title { font-size: 1.05rem !important; }
-
   /* Shrink my-area chrome so the cards get the room, not the padding */
   .fhboard-me        { padding: 12px 12px; border-radius: 12px; }
   .fhboard-me-header { gap: 6px; margin-bottom: 10px; }

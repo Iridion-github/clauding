@@ -52,7 +52,6 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
         <div className="fhboard-header">
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap', flex: 1 }}>
-              <Typography className="fhboard-title" variant="h6" color="primary" fontWeight="bold">Flipping Husks</Typography>
               <Chip label={`Round ${round}`} size="small" variant="outlined" />
               <Chip label={`Deck ${drawPile.length} · ${discardCount ?? 0} used`} size="small" variant="outlined" />
               {phase === 'round_end' && <Chip label="Round over" color="warning" size="small" />}

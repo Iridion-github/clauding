@@ -1,4 +1,22 @@
-@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Cinzel:wght@400;700&display=swap');
+/* Self-hosted fonts (same-origin) so they load inside the Discord Activity sandbox,
+   where cross-origin requests to fonts.googleapis.com / fonts.gstatic.com are
+   blocked by Discord's Content Security Policy. Latin subset only — every glyph
+   these fonts render here (0-12, "FLIPPING HUSKS", "FREEZE", etc.) is ASCII.
+   Cinzel ships as a variable font, so one file covers weights 400-700. */
+@font-face {
+  font-family: 'Bangers';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../../fonts/bangers-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Cinzel';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('../../fonts/cinzel-latin.woff2') format('woff2');
+}
 
 /* ── Base card ─────────────────────────────────────────────────────────────── */
 .fhcard {

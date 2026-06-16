@@ -7,6 +7,7 @@ const { createGame: createFlippingHusksGame, resetGame: resetFlippingHusksGame }
 const { applyAction: applyFlippingHusksAction } = require('./flippinghusks/GameEngine');
 
 const app = express();
+app.use(express.json());
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
@@ -271,6 +272,44 @@ function fhClientState(state) {
   const { discardPile, ...rest } = state;
   return { ...rest, discardCount: (discardPile || []).length };
 }
+
+// ── Discord Activity OAuth token exchange ──────────────────────────────────────
+// The embedded client gets a short-lived authorization code, then calls this to
+// trade it for an access token. The client secret stays here, never shipped to
+// the browser. Requires env: DISCORD_CLIENT_SECRET and a client id (we reuse the
+// build-time REACT_APP_DISCORD_CLIENT_ID, which Render also exposes at runtime).
+const DISCORD_CLIENT_ID     = process.env.DISCORD_CLIENT_ID || process.env.REACT_APP_DISCORD_CLIENT_ID;
+const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
+
+app.post('/api/token', async (req, res) => {
+  if (!DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET) {
+    return res.status(500).json({ error: 'Discord credentials not configured on the server.' });
+  }
+  if (!req.body?.code) {
+    return res.status(400).json({ error: 'Missing authorization code.' });
+  }
+  try {
+    const response = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: DISCORD_CLIENT_ID,
+        client_secret: DISCORD_CLIENT_SECRET,
+        grant_type: 'authorization_code',
+        code: req.body.code,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('[Discord] Token exchange failed:', data);
+      return res.status(502).json({ error: 'Token exchange failed.' });
+    }
+    res.json({ access_token: data.access_token });
+  } catch (err) {
+    console.error('[Discord] Token exchange error:', err);
+    res.status(500).json({ error: 'Token exchange error.' });
+  }
+});
 
 // Serve the React production build when it exists (i.e. when deployed)
 const buildDir = path.join(__dirname, '../build');

@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Box, Stack, Typography, CircularProgress } from '@mui/material';
 import { useFlippingHusks } from '../hooks/useFlippingHusks';
 import { FlippingHusksLobby } from '../components/flippinghusks/FlippingHusksLobby';
 import { FlippingHusksBoard } from '../components/flippinghusks/FlippingHusksBoard';
 import { CardDrawAnimation } from '../components/flippinghusks/CardDrawAnimation';
 import { ReshuffleAnimation } from '../components/flippinghusks/ReshuffleAnimation';
+import { isDiscordActivity, setupDiscord, discordRoomId, discordPlayerName } from '../discord/discord';
 
 export function FlippingHusksApp() {
   const [currentRoomId, setCurrentRoomId] = useState('');
+  // Discord handshake state: not-in-Discord is treated as "ready" so the normal
+  // website flow renders immediately.
+  const [discordReady, setDiscordReady] = useState(!isDiscordActivity);
+  const [discordError, setDiscordError] = useState(null);
 
   const {
     connected, playerId, isHost, hostId,
@@ -18,6 +24,26 @@ export function FlippingHusksApp() {
     nextRoundVotes, voteNextRound, nextRoundDeadline,
     joinRoom, startGame, sendAction,
   } = useFlippingHusks();
+
+  // When launched as a Discord Activity, do the SDK/OAuth handshake then auto-join
+  // a room keyed to the voice channel, using the Discord username. Everyone who
+  // opens the Activity in the same channel lands in the same room — no codes typed.
+  useEffect(() => {
+    if (!isDiscordActivity) return;
+    let cancelled = false;
+    setupDiscord()
+      .then(info => {
+        if (cancelled || !info) return;
+        const roomId = discordRoomId(info);
+        setCurrentRoomId(roomId);
+        joinRoom(roomId, discordPlayerName(info));
+        setDiscordReady(true);
+      })
+      .catch(err => {
+        if (!cancelled) setDiscordError(err.message || String(err));
+      });
+    return () => { cancelled = true; };
+  }, [joinRoom]);
 
   useEffect(() => {
     if (gameState?.phase === 'finished') {
@@ -109,6 +135,29 @@ export function FlippingHusksApp() {
           />
         )}
       </>
+    );
+  }
+
+  // Hold the lobby back until the Discord handshake finishes (or surface its error).
+  if (isDiscordActivity && !discordReady) {
+    return (
+      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', px: 3 }}>
+        <Stack spacing={2} sx={{ alignItems: 'center', textAlign: 'center' }}>
+          {discordError ? (
+            <>
+              <Typography variant="h6" color="error">Couldn't connect to Discord</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360 }}>
+                {discordError}
+              </Typography>
+            </>
+          ) : (
+            <>
+              <CircularProgress color="primary" />
+              <Typography variant="body2" color="text.secondary">Connecting to Discord…</Typography>
+            </>
+          )}
+        </Stack>
+      </Box>
     );
   }
 

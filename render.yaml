@@ -14,3 +14,11 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20"
+      # Discord Activity integration. Set these in the Render dashboard (sync:false
+      # keeps secrets out of the repo). REACT_APP_DISCORD_CLIENT_ID is read at BUILD
+      # time (baked into the bundle) and again at runtime by the token endpoint;
+      # DISCORD_CLIENT_SECRET is used only server-side for the OAuth code exchange.
+      - key: REACT_APP_DISCORD_CLIENT_ID
+        sync: false
+      - key: DISCORD_CLIENT_SECRET
+        sync: false

@@ -101,7 +101,7 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
                     )}
                   </div>
                   <Typography variant="caption" color="text.secondary">
-                    ~{score} pts · {uniq}/7 unique
+                    +{score} pts · {uniq}/7 unique
                     {p.secondChances > 0 && ` · ★×${p.secondChances}`}
                   </Typography>
                 </div>
@@ -125,7 +125,8 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
                 Total: <strong>{self?.totalScore ?? 0}</strong>
                 {self && (() => {
                   const { score, uniq, fh } = calcDisplay(self);
-                  return <span style={{ marginLeft: 8 }}>· ~{score} this round · {uniq}/7{fh ? ' 🎉' : ''}{self.secondChances > 0 ? ` · ★×${self.secondChances}` : ''}</span>;
+                  const toWin = Math.max(0, 200 - (self.totalScore ?? 0) - score);
+                  return <span style={{ marginLeft: 8 }}> · +{score} this round ({toWin} to 200) · {uniq}/7{fh ? ' 🎉' : ''}{self.secondChances > 0 ? ` · ★×${self.secondChances}` : ''}</span>;
                 })()}
               </Typography>
             </div>

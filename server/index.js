@@ -1,5 +1,6 @@
 const express = require('express');
 const http = require('http');
+const https = require('https');
 const { Server } = require('socket.io');
 const fs   = require('fs');
 const path = require('path');
@@ -281,6 +282,44 @@ function fhClientState(state) {
 const DISCORD_CLIENT_ID     = process.env.DISCORD_CLIENT_ID || process.env.REACT_APP_DISCORD_CLIENT_ID;
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 
+// POST the OAuth code to Discord using the built-in https module (no dependency on
+// a global fetch, which isn't present on older Node runtimes). Resolves with the
+// parsed JSON body and HTTP status.
+function discordTokenExchange(code) {
+  return new Promise((resolve, reject) => {
+    const body = new URLSearchParams({
+      client_id: DISCORD_CLIENT_ID,
+      client_secret: DISCORD_CLIENT_SECRET,
+      grant_type: 'authorization_code',
+      code,
+    }).toString();
+
+    const request = https.request(
+      {
+        hostname: 'discord.com',
+        path: '/api/oauth2/token',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Length': Buffer.byteLength(body),
+        },
+      },
+      (response) => {
+        let raw = '';
+        response.on('data', (chunk) => { raw += chunk; });
+        response.on('end', () => {
+          let data = null;
+          try { data = JSON.parse(raw); } catch { /* non-JSON body */ }
+          resolve({ status: response.statusCode, data, raw });
+        });
+      },
+    );
+    request.on('error', reject);
+    request.write(body);
+    request.end();
+  });
+}
+
 app.post('/api/token', async (req, res) => {
   if (!DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET) {
     return res.status(500).json({ error: 'Discord credentials not configured on the server.' });
@@ -289,19 +328,9 @@ app.post('/api/token', async (req, res) => {
     return res.status(400).json({ error: 'Missing authorization code.' });
   }
   try {
-    const response = await fetch('https://discord.com/api/oauth2/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: DISCORD_CLIENT_ID,
-        client_secret: DISCORD_CLIENT_SECRET,
-        grant_type: 'authorization_code',
-        code: req.body.code,
-      }),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      console.error('[Discord] Token exchange failed:', data);
+    const { status, data, raw } = await discordTokenExchange(req.body.code);
+    if (status !== 200 || !data?.access_token) {
+      console.error('[Discord] Token exchange failed:', status, data ?? raw);
       return res.status(502).json({ error: 'Token exchange failed.' });
     }
     res.json({ access_token: data.access_token });

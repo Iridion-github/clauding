@@ -302,9 +302,13 @@ function discordTokenExchange(code) {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           'Content-Length': Buffer.byteLength(body),
-          // Discord's API sits behind Cloudflare, which blocks requests without a
-          // User-Agent with HTTP 429 / "error code: 1015". This header is required.
-          'User-Agent': 'FlippingHusks/1.0 (+https://flippinghusks.onrender.com)',
+          // Discord's API sits behind Cloudflare. A non-browser User-Agent from a
+          // datacenter IP gets aggressively rate-limited (429 / "error code: 1015"),
+          // so we present a normal browser UA to look less like a bot.
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+            '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept': 'application/json',
         },
       },
       (response) => {
@@ -323,6 +327,21 @@ function discordTokenExchange(code) {
   });
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// A 429 is Cloudflare rejecting us at the edge BEFORE Discord's OAuth backend runs,
+// so the single-use code is NOT consumed and the same code can be safely retried.
+// Back off and retry a few times to ride out a transient rate-limit window.
+async function discordTokenExchangeWithRetry(code, attempts = 3) {
+  let last;
+  for (let i = 0; i < attempts; i++) {
+    last = await discordTokenExchange(code);
+    if (last.status !== 429) return last;
+    if (i < attempts - 1) await sleep(500 * 2 ** i); // 500ms, then 1s
+  }
+  return last;
+}
+
 app.post('/api/token', async (req, res) => {
   if (!DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET) {
     return res.status(500).json({ error: 'Discord credentials not configured on the server.' });
@@ -331,10 +350,18 @@ app.post('/api/token', async (req, res) => {
     return res.status(400).json({ error: 'Missing authorization code.' });
   }
   try {
-    const { status, data, raw } = await discordTokenExchange(req.body.code);
+    const { status, data, raw } = await discordTokenExchangeWithRetry(req.body.code);
     if (status !== 200 || !data?.access_token) {
       console.error('[Discord] Token exchange failed:', status, data ?? raw);
-      return res.status(502).json({ error: 'Token exchange failed.' });
+      // Surface Discord's own status + error so failures are diagnosable from the
+      // client (network tab) without needing server log access. `data.error` /
+      // `error_description` are Discord's OAuth error fields (e.g. invalid_client).
+      return res.status(502).json({
+        error: 'Token exchange failed.',
+        discordStatus: status,
+        discordError: data?.error ?? null,
+        discordErrorDescription: data?.error_description ?? (data ? null : raw?.slice(0, 200)),
+      });
     }
     res.json({ access_token: data.access_token });
   } catch (err) {

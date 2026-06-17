@@ -314,10 +314,30 @@ app.post('/api/token', async (req, res) => {
 // Serve the React production build when it exists (i.e. when deployed)
 const buildDir = path.join(__dirname, '../build');
 if (fs.existsSync(buildDir)) {
-  app.use(express.static(buildDir));
-  app.get('*', (req, res) =>
-    res.sendFile(path.join(buildDir, 'index.html'))
-  );
+  // Hashed assets (e.g. /static/js/main.<hash>.js) are immutable — cache them hard.
+  // index.html must NEVER be cached: the Discord Activity proxy (and browsers) can
+  // otherwise pin an old index.html that references asset hashes Render no longer
+  // has. The missing asset then falls through to the SPA fallback below and comes
+  // back as HTML, which the browser tries to parse as JS →
+  // "Uncaught SyntaxError: Unexpected token '<'". no-store prevents that.
+  app.use(express.static(buildDir, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith(`${path.sep}index.html`)) {
+        res.setHeader('Cache-Control', 'no-store');
+      }
+    },
+  }));
+
+  // SPA fallback for client-side routes only. A request for a missing static asset
+  // or an /api route must 404 honestly rather than be served index.html (which is
+  // what produced the "Unexpected token '<'" failure inside Discord).
+  app.get('*', (req, res) => {
+    if (req.path.startsWith('/static/') || req.path.startsWith('/api/') || path.extname(req.path)) {
+      return res.status(404).send('Not found');
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(path.join(buildDir, 'index.html'));
+  });
 }
 
 const PORT = process.env.PORT || 3001;

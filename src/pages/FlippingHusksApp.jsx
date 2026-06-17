@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Box, Stack, Typography, CircularProgress } from '@mui/material';
+import { Box, Stack, Typography, CircularProgress, Button } from '@mui/material';
 import { useFlippingHusks } from '../hooks/useFlippingHusks';
 import { FlippingHusksLobby } from '../components/flippinghusks/FlippingHusksLobby';
 import { FlippingHusksBoard } from '../components/flippinghusks/FlippingHusksBoard';
@@ -13,6 +13,12 @@ export function FlippingHusksApp() {
   // website flow renders immediately.
   const [discordReady, setDiscordReady] = useState(!isDiscordActivity);
   const [discordError, setDiscordError] = useState(null);
+  // The handshake can stall silently when Render's free tier is cold-starting:
+  // the SDK's own server-reachability probe hangs on a 503, so setupDiscord()
+  // neither resolves nor rejects. Flip this after a grace period so the user gets
+  // an explanation + a reload instead of an eternal spinner.
+  const [discordSlow, setDiscordSlow] = useState(false);
+  const DISCORD_SLOW_MS = 20000;
 
   const {
     connected, playerId, isHost, hostId,
@@ -31,6 +37,7 @@ export function FlippingHusksApp() {
   useEffect(() => {
     if (!isDiscordActivity) return;
     let cancelled = false;
+    const slowTimer = setTimeout(() => { if (!cancelled) setDiscordSlow(true); }, DISCORD_SLOW_MS);
     setupDiscord()
       .then(info => {
         if (cancelled || !info) return;
@@ -41,8 +48,9 @@ export function FlippingHusksApp() {
       })
       .catch(err => {
         if (!cancelled) setDiscordError(err.message || String(err));
-      });
-    return () => { cancelled = true; };
+      })
+      .finally(() => clearTimeout(slowTimer));
+    return () => { cancelled = true; clearTimeout(slowTimer); };
   }, [joinRoom]);
 
   useEffect(() => {
@@ -149,11 +157,21 @@ export function FlippingHusksApp() {
               <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360 }}>
                 {discordError}
               </Typography>
+              <Button variant="contained" onClick={() => window.location.reload()}>Reload</Button>
             </>
           ) : (
             <>
               <CircularProgress color="primary" />
               <Typography variant="body2" color="text.secondary">Connecting to Discord…</Typography>
+              {discordSlow && (
+                <>
+                  <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 360 }}>
+                    The server may be waking up — this can take up to a minute on the
+                    first launch. Hang tight, or reload to retry.
+                  </Typography>
+                  <Button variant="outlined" onClick={() => window.location.reload()}>Reload</Button>
+                </>
+              )}
             </>
           )}
         </Stack>

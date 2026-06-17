@@ -282,6 +282,48 @@ function fhClientState(state) {
 const DISCORD_CLIENT_ID     = process.env.DISCORD_CLIENT_ID || process.env.REACT_APP_DISCORD_CLIENT_ID;
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 
+// Render free-tier's shared datacenter IP is rate-limited by Discord's Cloudflare
+// (429 / "error code: 1015"). When DISCORD_TOKEN_PROXY_URL is set we forward the
+// code to a Cloudflare Worker, which does the discord.com call from a clean egress
+// IP and holds the client secret. The optional shared secret stops randoms from
+// using our Worker as an open token-exchange relay.
+const DISCORD_TOKEN_PROXY_URL    = process.env.DISCORD_TOKEN_PROXY_URL;
+const DISCORD_TOKEN_PROXY_SECRET = process.env.DISCORD_TOKEN_PROXY_SECRET;
+
+// Minimal JSON POST over the https module (matches the no-global-fetch approach
+// used for the direct Discord call). Resolves { status, data, raw }.
+function postJson(urlString, payload, extraHeaders = {}) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(urlString);
+    const body = JSON.stringify(payload);
+    const request = https.request(
+      {
+        hostname: u.hostname,
+        port: u.port || 443,
+        path: u.pathname + u.search,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+          ...extraHeaders,
+        },
+      },
+      (response) => {
+        let raw = '';
+        response.on('data', (chunk) => { raw += chunk; });
+        response.on('end', () => {
+          let data = null;
+          try { data = JSON.parse(raw); } catch { /* non-JSON body */ }
+          resolve({ status: response.statusCode, data, raw });
+        });
+      },
+    );
+    request.on('error', reject);
+    request.write(body);
+    request.end();
+  });
+}
+
 // POST the OAuth code to Discord using the built-in https module (no dependency on
 // a global fetch, which isn't present on older Node runtimes). Resolves with the
 // parsed JSON body and HTTP status.
@@ -343,11 +385,32 @@ async function discordTokenExchangeWithRetry(code, attempts = 3) {
 }
 
 app.post('/api/token', async (req, res) => {
-  if (!DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET) {
-    return res.status(500).json({ error: 'Discord credentials not configured on the server.' });
-  }
   if (!req.body?.code) {
     return res.status(400).json({ error: 'Missing authorization code.' });
+  }
+
+  // Preferred path: relay through the Cloudflare Worker (clean IP). The Worker
+  // returns the final response shape, so we pass its status + body straight back.
+  if (DISCORD_TOKEN_PROXY_URL) {
+    try {
+      const { status, data } = await postJson(
+        DISCORD_TOKEN_PROXY_URL,
+        { code: req.body.code },
+        DISCORD_TOKEN_PROXY_SECRET ? { 'x-proxy-secret': DISCORD_TOKEN_PROXY_SECRET } : {},
+      );
+      if (status !== 200 || !data?.access_token) {
+        console.error('[Discord] Proxy token exchange failed:', status, data);
+      }
+      return res.status(status || 502).json(data ?? { error: 'Proxy returned no body.' });
+    } catch (err) {
+      console.error('[Discord] Proxy token exchange error:', err);
+      return res.status(502).json({ error: 'Proxy token exchange error.' });
+    }
+  }
+
+  // Fallback path: call Discord directly from this server (needs creds here).
+  if (!DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET) {
+    return res.status(500).json({ error: 'Discord credentials not configured on the server.' });
   }
   try {
     const { status, data, raw } = await discordTokenExchangeWithRetry(req.body.code);

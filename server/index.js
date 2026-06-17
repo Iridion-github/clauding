@@ -302,6 +302,9 @@ function discordTokenExchange(code) {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           'Content-Length': Buffer.byteLength(body),
+          // Discord's API sits behind Cloudflare, which blocks requests without a
+          // User-Agent with HTTP 429 / "error code: 1015". This header is required.
+          'User-Agent': 'FlippingHusks/1.0 (+https://flippinghusks.onrender.com)',
         },
       },
       (response) => {

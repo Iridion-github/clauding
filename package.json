@@ -2,6 +2,7 @@
   "name": "clauding",
   "version": "0.1.0",
   "private": true,
+  "homepage": ".",
   "dependencies": {
     "@discord/embedded-app-sdk": "^2.5.0",
     "@emotion/react": "^11.14.0",

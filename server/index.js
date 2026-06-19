@@ -87,6 +87,33 @@ function scheduleRoomCleanup(roomId) {
   }, ROOM_CLEANUP_MS);
 }
 
+// Tear a room down entirely — server state + every client — and send everyone back
+// to the room-code screen. Used when all players unanimously vote to leave.
+function closeRoom(roomId) {
+  const room = fhRooms[roomId];
+  if (!room) return;
+  clearNextRoundTimer(room);
+  cancelRoomCleanup(room);
+  fh.to(roomId).emit('fh_room_closed'); // notify while sockets are still in the room
+  for (const p of room.players) {
+    if (!p.socketId) continue;
+    fh.sockets.get(p.socketId)?.leave(roomId);
+    delete fhSocketToRoom[p.socketId];
+  }
+  delete fhRooms[roomId];
+  console.log('[FlippingHusks] Room closed (all players voted to leave):', roomId);
+}
+
+// Close the room once every ONLINE player has voted to leave (offline players,
+// like in the next-round logic, don't block the decision).
+function maybeCloseRoomOnLeave(roomId) {
+  const room = fhRooms[roomId];
+  if (!room?.state) return;
+  const online = room.players.filter(p => p.connected !== false);
+  if (online.length === 0) return;
+  if (online.every(p => room.leaveGameVotes.has(p.id))) closeRoom(roomId);
+}
+
 fh.on('connection', (socket) => {
   console.log('[FlippingHusks] Connected:', socket.id);
 
@@ -112,6 +139,7 @@ fh.on('connection', (socket) => {
           nextRoundDeadline: room.nextRoundDeadline ?? null,
           nextRoundVotes: { votes: [...room.nextRoundVotes], players: roster(room) },
           playAgainVotes: { votes: [...room.playAgainVotes], players: roster(room) },
+          leaveGameVotes: { votes: [...(room.leaveGameVotes || [])], players: roster(room) },
         });
       }
       fh.to(roomId).emit('fh_room_update', { players: roster(room), hostId: room.hostId });
@@ -123,6 +151,7 @@ fh.on('connection', (socket) => {
       room = fhRooms[roomId] = {
         hostId: stableId, players: [], state: null,
         playAgainVotes: new Set(), nextRoundVotes: new Set(),
+        leaveGameVotes: new Set(),
         nextRoundTimer: null, nextRoundDeadline: null,
         cleanupTimer: null, lastActionIds: {},
       };
@@ -148,6 +177,7 @@ fh.on('connection', (socket) => {
     if (room.players.length < 1) { socket.emit('fh_error', { message: 'No players in room.' }); return; }
 
     room.lastActionIds = {};
+    room.leaveGameVotes.clear();
     room.state = createFlippingHusksGame(room.players.map(p => ({ id: p.id, name: p.name })));
     fh.to(roomId).emit('fh_game_started', { state: fhClientState(room.state) });
   });
@@ -220,10 +250,31 @@ fh.on('connection', (socket) => {
 
     if (room.playAgainVotes.size >= connectedCount(room)) {
       room.playAgainVotes.clear();
+      room.leaveGameVotes.clear();
       room.lastActionIds = {};
       resetFlippingHusksGame(room.state);
       fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
     }
+  });
+
+  // Vote to leave the game (and tear the room down if everyone agrees). `leaving`
+  // false withdraws a previously-cast vote (the player closed the modal).
+  socket.on('fh_leave_vote', ({ leaving } = {}) => {
+    const meta = fhSocketToRoom[socket.id];
+    if (!meta) return;
+    const room = fhRooms[meta.roomId];
+    if (!room?.state) return;
+    if (!room.leaveGameVotes) room.leaveGameVotes = new Set();
+
+    if (leaving) room.leaveGameVotes.add(meta.playerId);
+    else room.leaveGameVotes.delete(meta.playerId);
+
+    fh.to(meta.roomId).emit('fh_leave_update', {
+      votes: [...room.leaveGameVotes],
+      players: roster(room),
+    });
+
+    maybeCloseRoomOnLeave(meta.roomId);
   });
 
   socket.on('disconnect', () => {
@@ -243,6 +294,17 @@ fh.on('connection', (socket) => {
       // just mark them offline; they resume by reconnecting.
       if (player) player.connected = false;
       fh.to(meta.roomId).emit('fh_room_update', { players: roster(room), hostId: room.hostId });
+
+      // Drop any leave-game vote the now-offline player held, then re-check whether
+      // the remaining online players are unanimous (which would close the room).
+      if (room.leaveGameVotes?.delete(meta.playerId)) {
+        fh.to(meta.roomId).emit('fh_leave_update', {
+          votes: [...room.leaveGameVotes], players: roster(room),
+        });
+      }
+      maybeCloseRoomOnLeave(meta.roomId);
+      if (!fhRooms[meta.roomId]) return; // room was just closed
+
       // Online players may now be unanimous on next round → advance.
       if (room.state.phase === 'round_end'
           && room.nextRoundVotes.size > 0

@@ -19,6 +19,13 @@ const UNIQUE_CARDS = [
   { type: 'second_chance', value: 0, label: '2nd Chance' },
 ];
 
+// The preview grid: every unique front, then one extra slot showing the card back
+// (faceDown). The back ignores card content, so any card stands in for it.
+const PREVIEW_CARDS = [
+  ...UNIQUE_CARDS.map(card => ({ card, faceDown: false })),
+  { card: UNIQUE_CARDS[0], faceDown: true },
+];
+
 // Scale factor applied to the 72px "small" card so that exactly 3 fit per row
 // in the settings column (72 × 1.45 ≈ 104px).
 const CARD_SCALE = 1.45;
@@ -96,7 +103,7 @@ export function Settings({ open, onClose }) {
           flex: 1, overflowY: 'auto',
           display: 'flex', flexDirection: 'column',
           justifyContent: 'flex-start', alignItems: 'center',
-          px: { xs: 2.5, sm: 3 }, py: { xs: 3, sm: 4 },
+          px: { xs: 1.5, sm: 3 }, py: { xs: 3, sm: 4 },
         }}>
           <Stack spacing={4} sx={{ width: '100%', maxWidth: 360, alignItems: 'center' }}>
             <Typography variant="h4" color="primary" fontWeight="bold"
@@ -169,13 +176,14 @@ export function Settings({ open, onClose }) {
                   </Select>
                 </FormControl>
 
-                {/* Preview of every unique card in the deck for the chosen theme.
+                {/* Preview of every unique card in the deck for the chosen theme,
+                    plus one face-down card so the card back is shown too.
                     Cards are scaled up from the 72px "small" size so exactly 3 fit per row. */}
                 <Stack
                   direction="row"
-                  sx={{ flexWrap: 'wrap', justifyContent: 'center', gap: 1, mt: 2 }}
+                  sx={{ flexWrap: 'wrap', justifyContent: 'center', gap: 0.75, mt: 2 }}
                 >
-                  {UNIQUE_CARDS.map((card, i) => (
+                  {PREVIEW_CARDS.map(({ card, faceDown }, i) => (
                     <Box
                       key={i}
                       sx={{
@@ -185,7 +193,7 @@ export function Settings({ open, onClose }) {
                         '& > .fhcard:hover': { transform: `scale(${CARD_SCALE}) translateY(-3px)` },
                       }}
                     >
-                      <FlippingHusksCard card={card} small theme={settings.theme} />
+                      <FlippingHusksCard card={card} faceDown={faceDown} small theme={settings.theme} />
                     </Box>
                   ))}
                 </Stack>

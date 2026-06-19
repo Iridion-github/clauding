@@ -72,6 +72,39 @@
   transform: translateZ(0);
 }
 
+/* ── ClassicFantasy score card (+2…+10, ×2): dark coarse gold, engraved ───────── */
+.fhcard-cf-score {
+  align-items: center;
+  justify-content: center;
+  border: none;
+  /* Darker, "beaten" gold: a fine cross-hatch grain over a muted gold gradient
+     gives the coarse, hand-worked metal feel (vs. the bright default gold). */
+  background:
+    repeating-linear-gradient(45deg,  rgba(0,0,0,0.12)     0 1px, transparent 1px 5px),
+    repeating-linear-gradient(-45deg, rgba(255,232,170,0.06) 0 1px, transparent 1px 5px),
+    linear-gradient(150deg, #6b531c 0%, #8a6d27 26%, #5c461a 54%, #7d6222 78%, #4d3a13 100%);
+  box-shadow:
+    inset 0 2px 6px rgba(255, 224, 150, 0.16),   /* faint top sheen */
+    inset 0 -3px 9px rgba(0, 0, 0, 0.55),        /* heavy lower shadow → depth */
+    inset 0 0 0 2px rgba(38, 27, 8, 0.6);        /* dark golden rim (no red contour) */
+}
+
+/* The value engraved into the metal: chiselled Roman caps (Cinzel), incised so it
+   reads slightly darker than the gold, with a thin light bevel catching the cut. */
+.fhcf-score-label {
+  font-family: 'Cinzel', 'Georgia', serif;
+  font-weight: 700;
+  font-size: 60px;
+  line-height: 1;
+  letter-spacing: 1px;
+  color: #3c2d0e;
+  text-shadow:
+    0 -1px 0   rgba(0, 0, 0, 0.55),          /* dark upper edge — recess in shadow */
+    0  1px 0   rgba(255, 228, 150, 0.5),     /* light lower bevel — the knife cut */
+    0  2px 2px rgba(0, 0, 0, 0.4);
+}
+.fhcard-small .fhcf-score-label { font-size: 28px; }
+
 /* ── Highlight ───────────────────────────────────────────────────────────────── */
 .fhcard-highlight {
   outline: 3px solid #f0c040;
@@ -106,6 +139,70 @@
 }
 
 .fhcard-small .fhback-line { font-size: 11px; letter-spacing: 0.5px; }
+
+/* ── ClassicFantasy card back: intricate gold-on-black with an ornate frame ───── */
+.fhcard-cf-back {
+  border: none;
+  background-color: #090806;
+  /* Layered (top → bottom): gold diamond lattice, gold studs at the crossings,
+     a warm central glow, and a dark vignette to frame it. */
+  background-image:
+    repeating-linear-gradient(45deg,  rgba(214,176,74,0.30) 0 1px, transparent 1px 13px),
+    repeating-linear-gradient(-45deg, rgba(214,176,74,0.30) 0 1px, transparent 1px 13px),
+    radial-gradient(rgba(236,206,120,0.85) 0.9px, transparent 1.5px),
+    radial-gradient(120% 95% at 50% 46%, rgba(150,112,30,0.40) 0%, transparent 58%),
+    radial-gradient(125% 125% at 50% 50%, transparent 58%, rgba(0,0,0,0.7) 100%);
+  background-size: auto, auto, 13px 13px, auto, auto;
+  background-position: 0 0, 0 0, 6.5px 6.5px, 0 0, 0 0;
+  /* Concentric gold/black ornamental frame inside the card edge. */
+  box-shadow:
+    inset 0 0 0 3px #090806,
+    inset 0 0 0 4px rgba(214,176,74,0.8),
+    inset 0 0 0 7px #090806,
+    inset 0 0 0 8px rgba(214,176,74,0.4),
+    0 8px 28px rgba(0,0,0,0.75);
+}
+/* Thinner frame + tighter lattice on the small preview/mini cards. */
+.fhcard-small.fhcard-cf-back {
+  background-size: auto, auto, 9px 9px, auto, auto;
+  box-shadow:
+    inset 0 0 0 2px #090806,
+    inset 0 0 0 3px rgba(214,176,74,0.8),
+    inset 0 0 0 5px #090806,
+    inset 0 0 0 6px rgba(214,176,74,0.4),
+    0 6px 18px rgba(0,0,0,0.7);
+}
+
+.fhcf-back-line {
+  font-family: 'Cinzel', 'Georgia', serif;
+  font-weight: 700;
+  font-size: 23px;
+  letter-spacing: 1px;
+  line-height: 1.12;
+  /* Very dark glyphs, thickened by a black stroke… */
+  color: #0c0905;
+  -webkit-text-fill-color: #0c0905;
+  -webkit-text-stroke: 1px #000000;
+  /* …wrapped in a bright gold border + drop shadow so they read on any part of the
+     gold/black pattern (dark fill pops on gold, gold border pops on black). */
+  text-shadow:
+    1px 1px 0 #f4e3a0,
+    -1px 1px 0 #f4e3a0,
+    1px -1px 0 #f4e3a0,
+    -1px -1px 0 #f4e3a0,
+    0 3px 4px rgba(0,0,0,0.9);
+}
+.fhcard-small .fhcf-back-line {
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  -webkit-text-stroke-width: 0.5px;
+  text-shadow:
+    0.5px 0.5px 0 #f4e3a0,
+    -0.5px 0.5px 0 #f4e3a0,
+    0.5px -0.5px 0 #f4e3a0,
+    -0.5px -0.5px 0 #f4e3a0,
+    0 1px 2px rgba(0,0,0,0.9);
+}
 
 /* ── Number card ─────────────────────────────────────────────────────────────── */
 .fhcard-number {

@@ -41,6 +41,7 @@ function FlippingHusksAppInner() {
     animQueue, advanceAnim,
     playAgainVotes, votePlayAgain,
     nextRoundVotes, voteNextRound, nextRoundDeadline,
+    leaveGameVotes, voteLeaveGame, withdrawLeaveGame,
     joinRoom, startGame, sendAction,
   } = useFlippingHusks();
 
@@ -96,7 +97,8 @@ function FlippingHusksAppInner() {
       setBgmMuted(muted);
     }
 
-    if (phase === 'finished' && bgmRef.current) {
+    // Stop when the game ends or we leave it entirely (room closed → no gameState).
+    if ((phase === 'finished' || !phase) && bgmRef.current) {
       bgmRef.current.pause();
       bgmRef.current = null;
       setBgmPlaying(false);
@@ -188,6 +190,9 @@ function FlippingHusksAppInner() {
           nextRoundVotes={nextRoundVotes}
           voteNextRound={voteNextRound}
           nextRoundDeadline={nextRoundDeadline}
+          leaveGameVotes={leaveGameVotes}
+          voteLeaveGame={voteLeaveGame}
+          withdrawLeaveGame={withdrawLeaveGame}
           animating={currentAnim !== null}
         />
         {currentAnim?.type === 'reshuffle' && (

@@ -29,13 +29,19 @@ function cfImageFor(card) {
 export function FlippingHusksCard({ card, faceDown = false, small = false, highlight = false, theme }) {
   const activeTheme = useCardTheme(theme);
   if (!card) return null;
-  if (faceDown) return <CardBack small={small} />;
+  if (faceDown) {
+    return activeTheme === 'classic_fantasy'
+      ? <ClassicFantasyCardBack small={small} />
+      : <CardBack small={small} />;
+  }
 
-  // ClassicFantasy: render the artwork as a borderless, decoration-free card.
-  // Score cards (and anything without art) fall through to the default rendering.
+  // ClassicFantasy: number & action cards use artwork; the score cards (+N, ×2)
+  // get a dedicated dark-gold engraved card. Anything else falls through to default.
   if (activeTheme === 'classic_fantasy') {
     const img = cfImageFor(card);
     if (img) return <ClassicFantasyCard card={card} img={img} small={small} highlight={highlight} />;
+    if (card.type === 'modifier' || card.type === 'multiplier')
+      return <ClassicFantasyScoreCard card={card} small={small} highlight={highlight} />;
   }
 
   if (card.type === 'number') return <NumberCard card={card} small={small} highlight={highlight} />;
@@ -56,6 +62,17 @@ function ClassicFantasyCard({ card, img, small, highlight }) {
   );
 }
 
+// ─── ClassicFantasy Score Card (+2…+10, ×2) ────────────────────────────────────
+// No red frame — a darker, coarse gold slab with the value engraved into it.
+function ClassicFantasyScoreCard({ card, small, highlight }) {
+  const label = card.type === 'multiplier' ? '×2' : card.label;
+  return (
+    <div className={`fhcard fhcard-cf-score${small ? ' fhcard-small' : ''}${highlight ? ' fhcard-highlight' : ''}`}>
+      <span className="fhcf-score-label">{label}</span>
+    </div>
+  );
+}
+
 // ─── Card Back ─────────────────────────────────────────────────────────────────
 
 function CardBack({ small }) {
@@ -64,6 +81,20 @@ function CardBack({ small }) {
       <div className="fhback-inner">
         <span className="fhback-line">FLIPPING</span>
         <span className="fhback-line">HUSKS</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── ClassicFantasy Card Back ──────────────────────────────────────────────────
+// Gold-on-black intricate lattice with an ornamental frame; title in a medieval
+// (Cinzel) face for the fantasy feel.
+function ClassicFantasyCardBack({ small }) {
+  return (
+    <div className={`fhcard fhcard-cf-back${small ? ' fhcard-small' : ''}`}>
+      <div className="fhback-inner">
+        <span className="fhcf-back-line">FLIPPING</span>
+        <span className="fhcf-back-line">HUSKS</span>
       </div>
     </div>
   );

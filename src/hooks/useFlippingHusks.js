@@ -47,6 +47,7 @@ export function useFlippingHusks() {
   const [animQueue, setAnimQueue]     = useState([]); // [{card,isBust,isFlippingHusks,secondChanceCard?,savedPlayerId?}]
   const [playAgainVotes, setPlayAgainVotes]   = useState({ votes: [], players: [] });
   const [nextRoundVotes, setNextRoundVotes]   = useState({ votes: [], players: [] });
+  const [leaveGameVotes, setLeaveGameVotes]   = useState({ votes: [], players: [] });
   const [nextRoundDeadline, setNextRoundDeadline] = useState(null); // epoch ms; null = no countdown
 
   useEffect(() => {
@@ -83,13 +84,14 @@ export function useFlippingHusks() {
       setError(null);
       setPlayAgainVotes({ votes: [], players: [] });
       setNextRoundVotes({ votes: [], players: [] });
+      setLeaveGameVotes({ votes: [], players: [] });
       setNextRoundDeadline(null);
       setAnimQueue([]);
     });
 
     // Full authoritative state replacement after a reconnect: jump straight to the
     // current state WITHOUT replaying the animations missed while offline.
-    socket.on('fh_resync', ({ state, nextRoundDeadline: nrd, nextRoundVotes: nrv, playAgainVotes: pav }) => {
+    socket.on('fh_resync', ({ state, nextRoundDeadline: nrd, nextRoundVotes: nrv, playAgainVotes: pav, leaveGameVotes: lgv }) => {
       prevStateRef.current = state;
       setGameState(state);
       setAnimQueue([]);
@@ -98,6 +100,7 @@ export function useFlippingHusks() {
       setNextRoundDeadline(nrd ?? null);
       if (nrv) setNextRoundVotes(nrv);
       if (pav) setPlayAgainVotes(pav);
+      if (lgv) setLeaveGameVotes(lgv);
     });
 
     socket.on('fh_state_update', ({ state }) => {
@@ -106,6 +109,7 @@ export function useFlippingHusks() {
       // Play-again reset: wipe queue so no stale animations bleed into next game
       if (prev?.phase === 'finished' && state.phase === 'playing') {
         setPlayAgainVotes({ votes: [], players: [] });
+        setLeaveGameVotes({ votes: [], players: [] });
         setNextRoundDeadline(null);
         setAnimQueue([]);
         prevStateRef.current = state;
@@ -130,9 +134,29 @@ export function useFlippingHusks() {
     });
     socket.on('fh_play_again_update',  ({ votes, players }) => setPlayAgainVotes({ votes, players }));
     socket.on('fh_next_round_update',   ({ votes, players }) => setNextRoundVotes({ votes, players }));
+    socket.on('fh_leave_update',        ({ votes, players }) => setLeaveGameVotes({ votes, players }));
     socket.on('fh_next_round_countdown', ({ deadline }) => setNextRoundDeadline(deadline));
     socket.on('fh_action_rejected', ({ error: e }) => setActionError(e));
     socket.on('fh_error',          ({ message })   => setError(message));
+
+    // The whole room voted to leave: the room is gone server-side. Drop all game
+    // state so the player lands back on the room-code screen, and forget the room
+    // so a reconnect doesn't try to auto-rejoin it.
+    socket.on('fh_room_closed', () => {
+      joinInfoRef.current = null;
+      prevStateRef.current = null;
+      setGameState(null);
+      setRoomPlayers([]);
+      setHostId(null);
+      setIsHost(false);
+      setAnimQueue([]);
+      setPlayAgainVotes({ votes: [], players: [] });
+      setNextRoundVotes({ votes: [], players: [] });
+      setLeaveGameVotes({ votes: [], players: [] });
+      setNextRoundDeadline(null);
+      setActionError(null);
+      setError(null);
+    });
 
     socket.connect();
     return () => {
@@ -197,6 +221,8 @@ export function useFlippingHusks() {
   const advanceAnim   = useCallback(() => setAnimQueue(q => q.slice(1)), []);
   const votePlayAgain   = useCallback(() => socketRef.current?.emit('fh_play_again'), []);
   const voteNextRound   = useCallback(() => socketRef.current?.emit('fh_next_round_vote'), []);
+  const voteLeaveGame     = useCallback(() => socketRef.current?.emit('fh_leave_vote', { leaving: true }), []);
+  const withdrawLeaveGame = useCallback(() => socketRef.current?.emit('fh_leave_vote', { leaving: false }), []);
 
   const isMyTurn = gameState?.activePlayerId === playerId;
   const self     = gameState ? gameState.players[playerId] : null;
@@ -209,6 +235,7 @@ export function useFlippingHusks() {
     animQueue, advanceAnim,
     playAgainVotes, votePlayAgain,
     nextRoundVotes, voteNextRound, nextRoundDeadline,
+    leaveGameVotes, voteLeaveGame, withdrawLeaveGame,
     joinRoom, startGame, sendAction,
   };
 }

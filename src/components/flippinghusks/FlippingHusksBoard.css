@@ -124,34 +124,54 @@
   transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
   position: relative;
   overflow: hidden;
+  /* No native tap/focus highlight box when clicked or tapped. */
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
-.fhaction-btn:hover:not(:disabled) {
-  transform: translateY(-3px);
-}
-.fhaction-btn:active:not(:disabled) {
-  transform: translateY(0);
+.fhaction-btn:focus,
+.fhaction-btn:focus-visible {
+  outline: none;
 }
 .fhaction-btn:disabled {
   opacity: 0.35;
   cursor: default;
 }
 
+/* Card — polished, semi-transparent emerald (a bit darker green than before). */
 .fhaction-btn-hit {
-  background: linear-gradient(145deg, #1b5e20, #2e7d32);
-  box-shadow: 0 4px 20px rgba(46,125,50,0.5);
-  color: #c8e6c9;
-}
-.fhaction-btn-hit:hover:not(:disabled) {
-  box-shadow: 0 8px 28px rgba(46,125,50,0.7);
+  background:
+    /* glossy top sheen */
+    linear-gradient(160deg, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0.06) 20%, transparent 44%),
+    /* gem facet glints */
+    radial-gradient(125% 80% at 28% 8%, rgba(130,255,205,0.32), transparent 55%),
+    radial-gradient(110% 90% at 82% 105%, rgba(0,70,45,0.6), transparent 60%),
+    /* deep emerald body (semi-transparent so the dark bar shows through) */
+    linear-gradient(150deg, rgba(7,66,43,0.90) 0%, rgba(6,92,58,0.90) 46%, rgba(3,46,30,0.94) 100%);
+  border: 1px solid rgba(130,255,205,0.28);
+  color: #d8ffe9;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.55);
+  box-shadow:
+    inset 0 1px 1px rgba(220,255,235,0.55),
+    inset 0 -9px 20px rgba(0,0,0,0.45),
+    0 4px 22px rgba(10,120,72,0.5);
 }
 
+/* Stay — polished, semi-transparent dark ruby. */
 .fhaction-btn-stay {
-  background: linear-gradient(145deg, #bf360c, #e64a19);
-  box-shadow: 0 4px 20px rgba(230,74,25,0.5);
-  color: #ffe0b2;
-}
-.fhaction-btn-stay:hover:not(:disabled) {
-  box-shadow: 0 8px 28px rgba(230,74,25,0.7);
+  background:
+    linear-gradient(160deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0.05) 20%, transparent 44%),
+    radial-gradient(125% 80% at 28% 8%, rgba(255,150,170,0.32), transparent 55%),
+    radial-gradient(110% 90% at 82% 105%, rgba(60,0,12,0.62), transparent 60%),
+    linear-gradient(150deg, rgba(104,9,28,0.90) 0%, rgba(140,12,38,0.90) 46%, rgba(64,4,16,0.94) 100%);
+  border: 1px solid rgba(255,160,178,0.28);
+  color: #ffdbe2;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.55);
+  box-shadow:
+    inset 0 1px 1px rgba(255,225,232,0.5),
+    inset 0 -9px 20px rgba(0,0,0,0.45),
+    0 4px 22px rgba(150,20,50,0.5);
 }
 
 .fhaction-btn-main {
@@ -167,6 +187,12 @@
 .fhaction-btn-icon {
   font-size: 22px;
   line-height: 1;
+  /* Fixed, centred box so different emoji glyph heights (🃏 vs ✋) can't shift the
+     labels below them — keeps "Hit" and "Stay" on the same line across buttons. */
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .fhaction-status {
@@ -472,6 +498,31 @@
 .fhplay-again-name  { flex: 1; font-weight: bold; }
 .fhplay-again-status{ font-size: 12px; opacity: 0.65; }
 
+/* ── Leave Game chip (header) + modal ───────────────────────────────────────── */
+/* Red-tinted header chip, matched in size to the Log toggle next to it. */
+.fhleave-chip.MuiChip-root {
+  color: #ff6b6b;
+  border-color: rgba(255, 107, 107, 0.5);
+  font-weight: bold;
+}
+.fhleave-chip.MuiChip-root:hover {
+  background: rgba(255, 107, 107, 0.14);
+  border-color: #ff6b6b;
+}
+.fhleave-modal { position: relative; }
+.fhleave-close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+.fhleave-close:hover { color: #fff; }
+
 /* ── Observer modal (other players) ─────────────────────────────────────────── */
 @keyframes fh-observer-pulse {
   0%, 100% { opacity: 0.9; }
@@ -561,8 +612,9 @@
   .fhmini-card .fhcard { box-shadow: -5px 0 6px -2px rgba(0, 0, 0, 0.55); }
   .fhmini-card + .fhmini-card { margin-left: -9px; }  /* ~25% of the 36px card covered */
 
-  /* Bigger, clearer log toggle — comfortable tap target with readable text */
-  .fhlog-toggle {
+  /* Bigger, clearer log toggle + leave chip — comfortable tap targets */
+  .fhlog-toggle,
+  .fhleave-chip {
     height: 30px !important;
     font-size: 13px !important;
   }

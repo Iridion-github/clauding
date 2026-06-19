@@ -24,7 +24,7 @@ function truncateName(name, max = 16) {
   return name.length > max ? name.slice(0, max - 1) + '…' : name;
 }
 
-export function FlippingHusksBoard({ gameState, playerId, connected = true, roomPlayers = [], isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain, nextRoundVotes, voteNextRound, nextRoundDeadline, animating }) {
+export function FlippingHusksBoard({ gameState, playerId, connected = true, roomPlayers = [], isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain, nextRoundVotes, voteNextRound, nextRoundDeadline, leaveGameVotes = { votes: [], players: [] }, voteLeaveGame, withdrawLeaveGame, animating }) {
   const { players, playerOrder, activePlayerId, phase, round, drawPile, discardCount, log, winner, pendingAction } = gameState;
   const offlineIds = new Set(roomPlayers.filter(p => p.connected === false).map(p => p.id));
   const self = players[playerId];
@@ -33,6 +33,9 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
   const otherPending    = pendingAction != null && pendingAction.drawerId !== playerId;
   const hasVotedPlayAgain  = playAgainVotes.votes.includes(playerId);
   const hasVotedNextRound  = nextRoundVotes.votes.includes(playerId);
+  const hasVotedLeave      = leaveGameVotes.votes.includes(playerId);
+  // The "Leave Game" vote is only offered while a game is actively being played.
+  const gameInProgress     = phase === 'playing' || phase === 'round_end';
 
   const isMobile = useMediaQuery('(orientation: portrait), (max-width: 640px)');
   const [logOpen, setLogOpen] = useState(false);
@@ -57,6 +60,19 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
               {phase === 'round_end' && <Chip label="Round over" color="warning" size="small" />}
               {phase === 'finished'  && <Chip label={`${players[winner].name} wins!`} color="primary" />}
             </Stack>
+            {/* Leave Game: top-right on desktop (the chips' flex:1 pushes it to the
+                main column's right edge, just outside the log window); on mobile it
+                sits to the left of the Log toggle. */}
+            {gameInProgress && (
+              <Chip
+                className="fhleave-chip"
+                label="Leave"
+                size="small"
+                onClick={voteLeaveGame}
+                variant="outlined"
+                sx={{ cursor: 'pointer', flexShrink: 0 }}
+              />
+            )}
             {isMobile && (
               <Chip
                 className="fhlog-toggle"
@@ -207,6 +223,17 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
         />
       )}
 
+      {/* ── Leave Game vote modal (button lives in the header) ───────────── */}
+      {gameInProgress && hasVotedLeave && (
+        <LeaveGameModal
+          votes={leaveGameVotes.votes}
+          players={playerOrder
+            .filter(pid => !offlineIds.has(pid))
+            .map(pid => ({ id: pid, name: players[pid].name }))}
+          onClose={withdrawLeaveGame}
+        />
+      )}
+
       {/* ── Target picker (drawer chooses) ───────────────────────────────── */}
       {myPendingIsOpen && !animating && (
         <TargetPicker
@@ -251,11 +278,9 @@ function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePla
         >
           <span className="fhaction-btn-icon">→</span>
           <span className="fhaction-btn-main">{hasVotedNextRound ? 'Waiting…' : 'Next Round'}</span>
-          <span className="fhaction-btn-sub">
-            {hasVotedNextRound
-              ? `${nextRoundVoteCount}/${playerOrder.length} ready`
-              : 'Continue to next round'}
-          </span>
+          {hasVotedNextRound && (
+            <span className="fhaction-btn-sub">{nextRoundVoteCount}/{playerOrder.length} ready</span>
+          )}
         </button>
       </div>
     );
@@ -300,18 +325,14 @@ function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePla
         className="fhaction-btn fhaction-btn-hit"
         onClick={() => sendAction({ type: 'HIT' })}
       >
-        <span className="fhaction-btn-icon">🃏</span>
-        <span className="fhaction-btn-main">Hit</span>
-        <span className="fhaction-btn-sub">Draw a card</span>
+        <span className="fhaction-btn-main">Card</span>
       </button>
       <button
         className="fhaction-btn fhaction-btn-stay"
         disabled={self?.status !== 'active'}
         onClick={() => { new Audio('/sounds/chicken.mp3').play().catch(() => {}); sendAction({ type: 'STAY' }); }}
       >
-        <span className="fhaction-btn-icon">✋</span>
         <span className="fhaction-btn-main">Stay</span>
-        <span className="fhaction-btn-sub">Bank your points</span>
       </button>
     </div>
   );
@@ -370,6 +391,40 @@ function PlayAgainModal({ votes, players }) {
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
           {votes.length} / {players.length} ready
+        </Typography>
+      </div>
+    </div>
+  );
+}
+
+// ── Leave Game modal ──────────────────────────────────────────────────────────
+// Mirrors the Play Again modal, but closable: closing withdraws this player's vote.
+// When every online player has voted, the server tears the room down for everyone.
+function LeaveGameModal({ votes, players, onClose }) {
+  return (
+    <div className="fhplay-again-overlay" onClick={onClose}>
+      <div className="fhplay-again-modal fhleave-modal" onClick={e => e.stopPropagation()}>
+        <button className="fhleave-close" onClick={onClose} aria-label="Close">×</button>
+        <Typography variant="h6" sx={{ textAlign: 'center', mb: 2, fontWeight: 'bold' }}>
+          🚪 Leave Game?
+        </Typography>
+        <Stack spacing={1.5}>
+          {players.map(p => {
+            const ready = votes.includes(p.id);
+            return (
+              <div key={p.id} className={`fhplay-again-row ${ready ? 'ready' : 'waiting'}`}>
+                <span className="fhplay-again-icon">{ready ? '✓' : '⏳'}</span>
+                <span className="fhplay-again-name">{p.name}</span>
+                <span className="fhplay-again-status">{ready ? 'Wants to leave' : 'Still playing'}</span>
+              </div>
+            );
+          })}
+        </Stack>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+          {votes.length} / {players.length} want to leave
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+          Everyone must agree. Close to keep playing.
         </Typography>
       </div>
     </div>

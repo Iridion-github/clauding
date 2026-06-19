@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Box, Stack, Typography, CircularProgress, Button } from '@mui/material';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Box, Stack, Typography, CircularProgress, Button, Fab } from '@mui/material';
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import { useFlippingHusks } from '../hooks/useFlippingHusks';
 import { FlippingHusksLobby } from '../components/flippinghusks/FlippingHusksLobby';
 import { FlippingHusksBoard } from '../components/flippinghusks/FlippingHusksBoard';
@@ -7,6 +9,7 @@ import { CardDrawAnimation } from '../components/flippinghusks/CardDrawAnimation
 import { ReshuffleAnimation } from '../components/flippinghusks/ReshuffleAnimation';
 import { isDiscordActivity, setupDiscord, discordRoomId, discordPlayerName } from '../discord/discord';
 import { CardThemeProvider } from '../components/flippinghusks/CardThemeContext';
+import { loadSettings } from '../components/flippinghusks/settingsStore';
 
 export function FlippingHusksApp() {
   // Provide the saved card theme to every card rendered in the lobby, board and animations.
@@ -68,6 +71,54 @@ function FlippingHusksAppInner() {
       new Audio('/sounds/victory.mp3').play().catch(() => {});
     }
   }, [gameState?.phase]);
+
+  // Background music: starts once the game begins (first cards are dealt in the
+  // 'playing' phase), loops quietly for the whole game, and stops when it ends.
+  const bgmRef = useRef(null);
+  const [bgmPlaying, setBgmPlaying] = useState(false);
+  const [bgmMuted, setBgmMuted] = useState(false);
+  const BGM_VOLUME = 0.05;
+
+  useEffect(() => {
+    const phase = gameState?.phase;
+
+    if (phase === 'playing' && !bgmRef.current) {
+      const settings = loadSettings();
+      // Only the 'default' track has audio for now; respect the on/off toggle.
+      if (settings.backgroundMusic && settings.musicTrack === 'default') {
+        const audio = new Audio('/music/DefaultBgm.mp3');
+        audio.loop = true;
+        audio.volume = BGM_VOLUME;
+        // Only show the mute button once playback actually starts (autoplay may be blocked).
+        audio.play().then(() => setBgmPlaying(true)).catch(() => {});
+        bgmRef.current = audio;
+        setBgmMuted(false);
+      }
+    }
+
+    if (phase === 'finished' && bgmRef.current) {
+      bgmRef.current.pause();
+      bgmRef.current = null;
+      setBgmPlaying(false);
+    }
+  }, [gameState?.phase]);
+
+  // Toggle mute by swapping the volume between 0 and the normal level.
+  function toggleBgmMute() {
+    const audio = bgmRef.current;
+    if (!audio) return;
+    const muted = audio.volume === 0;
+    audio.volume = muted ? BGM_VOLUME : 0;
+    setBgmMuted(!muted);
+  }
+
+  // Stop the music if we leave the game (unmount / navigate away).
+  useEffect(() => () => {
+    if (bgmRef.current) {
+      bgmRef.current.pause();
+      bgmRef.current = null;
+    }
+  }, []);
 
   function handleJoin(roomId, name) {
     setCurrentRoomId(roomId);
@@ -151,6 +202,16 @@ function FlippingHusksAppInner() {
             secondChanceCard={currentAnim.secondChanceCard ?? null}
             onDone={advanceAnim}
           />
+        )}
+        {bgmPlaying && (
+          <Fab
+            size="small"
+            onClick={toggleBgmMute}
+            aria-label={bgmMuted ? 'Unmute music' : 'Mute music'}
+            sx={{ position: 'fixed', top: '50%', right: 16, transform: 'translateY(-50%)', zIndex: 1300 }}
+          >
+            {bgmMuted ? <VolumeOffIcon /> : <VolumeUpIcon />}
+          </Fab>
         )}
       </>
     );

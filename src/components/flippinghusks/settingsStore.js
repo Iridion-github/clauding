@@ -10,6 +10,21 @@ export const DEFAULT_SETTINGS = {
   theme: 'default',
 };
 
+// Playback volume for the background music, shared by the in-game audio and the
+// settings preview player so they always match.
+export const BGM_VOLUME = 0.05;
+
+// Background-music track → audio file in public/music/.
+const MUSIC_FILES = {
+  default: 'DefaultBgm.mp3',
+  classic_fantasy: 'ClassicFantasyBgm.mp3',
+};
+
+// Public URL of the audio file for a track (falls back to the default track).
+export function musicSrcFor(track) {
+  return `/music/${MUSIC_FILES[track] ?? MUSIC_FILES.default}`;
+}
+
 // Read persisted settings, falling back to defaults for anything missing/corrupt.
 export function loadSettings() {
   try {

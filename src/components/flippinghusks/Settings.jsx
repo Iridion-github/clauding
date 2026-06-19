@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Dialog, Box, Button, Typography, Stack,
   FormControlLabel, Checkbox, Collapse,
   FormControl, InputLabel, Select, MenuItem,
 } from '@mui/material';
 import { FlippingHusksCard } from './FlippingHusksCard';
-import { loadSettings, saveSettings } from './settingsStore';
+import { loadSettings, saveSettings, musicSrcFor, BGM_VOLUME } from './settingsStore';
 import { useSetCardTheme } from './CardThemeContext';
 
 // Every distinct card in the 94-card deck (one of each), in deck order:
@@ -37,11 +37,30 @@ export function Settings({ open, onClose }) {
   // Local draft so Cancel can discard unsaved edits.
   const [settings, setSettings] = useState(loadSettings);
   const setCardTheme = useSetCardTheme();
+  const previewAudioRef = useRef(null);
 
   // Re-sync from storage each time the page is opened, so it reflects what was last saved.
   useEffect(() => {
     if (open) setSettings(loadSettings());
   }, [open]);
+
+  // Stop the preview player when Background Music is switched off (the player is
+  // hidden by the Collapse, so it must not keep playing in the background).
+  useEffect(() => {
+    if (!settings.backgroundMusic && previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current.currentTime = 0;
+    }
+  }, [settings.backgroundMusic]);
+
+  // Callback ref: set the preview player's volume to match the in-game volume the
+  // moment the element attaches (volume is a DOM property, not a JSX attribute, and
+  // a fresh <audio> defaults to 1.0). Done here rather than in an effect so it can't
+  // run before the node exists.
+  const setPreviewAudio = useCallback((node) => {
+    previewAudioRef.current = node;
+    if (node) node.volume = BGM_VOLUME;
+  }, []);
 
   function set(key, value) {
     setSettings(s => ({ ...s, [key]: value }));
@@ -124,6 +143,15 @@ export function Settings({ open, onClose }) {
                       </Select>
                     </FormControl>
                   </Box>
+                  {/* Preview player for the selected track. */}
+                  <Box
+                    component="audio"
+                    ref={setPreviewAudio}
+                    controls
+                    preload="metadata"
+                    src={musicSrcFor(settings.musicTrack)}
+                    sx={{ mt: 1.5, width: '100%', display: 'block' }}
+                  />
                 </Collapse>
               </Box>
 

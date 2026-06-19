@@ -9,7 +9,7 @@ import { CardDrawAnimation } from '../components/flippinghusks/CardDrawAnimation
 import { ReshuffleAnimation } from '../components/flippinghusks/ReshuffleAnimation';
 import { isDiscordActivity, setupDiscord, discordRoomId, discordPlayerName } from '../discord/discord';
 import { CardThemeProvider } from '../components/flippinghusks/CardThemeContext';
-import { loadSettings } from '../components/flippinghusks/settingsStore';
+import { loadSettings, musicSrcFor, BGM_VOLUME } from '../components/flippinghusks/settingsStore';
 
 export function FlippingHusksApp() {
   // Provide the saved card theme to every card rendered in the lobby, board and animations.
@@ -77,23 +77,23 @@ function FlippingHusksAppInner() {
   const bgmRef = useRef(null);
   const [bgmPlaying, setBgmPlaying] = useState(false);
   const [bgmMuted, setBgmMuted] = useState(false);
-  const BGM_VOLUME = 0.05;
 
   useEffect(() => {
     const phase = gameState?.phase;
 
     if (phase === 'playing' && !bgmRef.current) {
+      // Read the player's saved settings on game entry.
       const settings = loadSettings();
-      // Only the 'default' track has audio for now; respect the on/off toggle.
-      if (settings.backgroundMusic && settings.musicTrack === 'default') {
-        const audio = new Audio('/music/DefaultBgm.mp3');
-        audio.loop = true;
-        audio.volume = BGM_VOLUME;
-        // Only show the mute button once playback actually starts (autoplay may be blocked).
-        audio.play().then(() => setBgmPlaying(true)).catch(() => {});
-        bgmRef.current = audio;
-        setBgmMuted(false);
-      }
+      const audio = new Audio(musicSrcFor(settings.musicTrack));
+      audio.loop = true;
+      // If Background Music is disabled, the track still loads but starts muted
+      // (volume 0) — the player can unmute it via the on-screen button.
+      const muted = !settings.backgroundMusic;
+      audio.volume = muted ? 0 : BGM_VOLUME;
+      // Only show the mute button once playback actually starts (autoplay may be blocked).
+      audio.play().then(() => setBgmPlaying(true)).catch(() => {});
+      bgmRef.current = audio;
+      setBgmMuted(muted);
     }
 
     if (phase === 'finished' && bgmRef.current) {

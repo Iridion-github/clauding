@@ -7,13 +7,16 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import StarIcon from '@mui/icons-material/Star';
 import SchoolIcon from '@mui/icons-material/School';
+import SettingsIcon from '@mui/icons-material/Settings';
 import { LearnToPlay } from './LearnToPlay';
+import { Settings } from './Settings';
 
 export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPlayers, roomId, error, onJoin, onStart }) {
   const navigate = useNavigate();
   const [inputRoomId, setInputRoomId] = useState(() => localStorage.getItem('fh_roomCode') ?? '');
   const [name, setName] = useState(() => localStorage.getItem('fh_playerName') ?? '');
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const inRoom = roomPlayers.length > 0;
 
   function handleJoin(e) {
@@ -59,6 +62,11 @@ export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPl
             <Button variant="contained" color="secondary" size="large" fullWidth
               startIcon={<SchoolIcon />} onClick={() => setShowTutorial(true)}>
               Learn to Play
+            </Button>
+            <Button variant="outlined" color="inherit" size="large" fullWidth
+              startIcon={<SettingsIcon />} onClick={() => setShowSettings(true)}
+              sx={{ borderColor: 'rgba(255,255,255,0.18)' }}>
+              Settings
             </Button>
           </Stack>
         </Box>
@@ -108,6 +116,7 @@ export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPl
       )}
 
       <LearnToPlay open={showTutorial} onClose={() => setShowTutorial(false)} />
+      <Settings open={showSettings} onClose={() => setShowSettings(false)} />
     </Box>
   );
 }

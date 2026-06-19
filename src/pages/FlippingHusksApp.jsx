@@ -6,8 +6,18 @@ import { FlippingHusksBoard } from '../components/flippinghusks/FlippingHusksBoa
 import { CardDrawAnimation } from '../components/flippinghusks/CardDrawAnimation';
 import { ReshuffleAnimation } from '../components/flippinghusks/ReshuffleAnimation';
 import { isDiscordActivity, setupDiscord, discordRoomId, discordPlayerName } from '../discord/discord';
+import { CardThemeProvider } from '../components/flippinghusks/CardThemeContext';
 
 export function FlippingHusksApp() {
+  // Provide the saved card theme to every card rendered in the lobby, board and animations.
+  return (
+    <CardThemeProvider>
+      <FlippingHusksAppInner />
+    </CardThemeProvider>
+  );
+}
+
+function FlippingHusksAppInner() {
   const [currentRoomId, setCurrentRoomId] = useState('');
   // Discord handshake state: not-in-Discord is treated as "ready" so the normal
   // website flow renders immediately.

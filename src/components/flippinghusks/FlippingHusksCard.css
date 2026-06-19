@@ -50,6 +50,28 @@
 }
 .fhcard-small:hover { transform: translateY(-3px); }
 
+/* ── ClassicFantasy variant (image only) ─────────────────────────────────────── */
+/* No vine frame, corners or decorations — just the artwork fitted to the card. */
+.fhcard-cf {
+  border: none;
+  background-color: #0d0d0d;
+}
+.fhcard-cf-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  /* Request smooth/high-quality resampling so shrunk artwork isn't aliased.
+     Progressive fallback: unsupported values are ignored, leaving the prior one. */
+  image-rendering: auto;
+  image-rendering: smooth;
+  image-rendering: high-quality;
+  /* Nudge onto the GPU compositing path, which uses bilinear filtering. */
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
 /* ── Highlight ───────────────────────────────────────────────────────────────── */
 .fhcard-highlight {
   outline: 3px solid #f0c040;

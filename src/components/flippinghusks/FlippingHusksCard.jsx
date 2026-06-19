@@ -1,15 +1,59 @@
 import { useId } from 'react';
 import './FlippingHusksCard.css';
+import { useCardTheme } from './CardThemeContext';
 
 const VINE = [null,'#9e9e9e','#aed136','#e91e63','#26c6da','#00897b','#6a1b9a','#8d6e63','#43a047','#f57c00','#c62828','#1565c0','#455a64'];
 const RAINBOW_STOPS = ['#ff3333','#ff9900','#ffee00','#33cc33','#3399ff','#cc33ff','#ff3399'];
 
-export function FlippingHusksCard({ card, faceDown = false, small = false, highlight = false }) {
+// ─── ClassicFantasy theme: card face → image file in public/images/ClassicFantasy ──
+// Only number cards (0–12) and the three action cards have artwork. Score cards
+// (modifiers / ×2) and the card back fall back to the default look.
+const CF_NUMBER_IMG = {
+  0: '0Beholder0.png',     1: '1Ashari1.png',       2: '2Ecate2.png',
+  3: '3Echo3.png',         4: '4Frederick4.png',    5: '5Leyah5.png',
+  6: '6Morzan6.png',       7: '7Vikas7.png',        8: '8DisplacerBeast8.png',
+  9: '9Mimic9.png',        10: '10Bagpipes10.png',  11: '11Potion11.png',
+  12: '12Dragon12.png',
+};
+const CF_ACTION_IMG = {
+  freeze: 'Freeze.png',
+  flip_three: 'FlipThree.png',
+  second_chance: 'SecondChance.png',
+};
+
+function cfImageFor(card) {
+  if (card.type === 'number') return CF_NUMBER_IMG[card.value] ?? null;
+  return CF_ACTION_IMG[card.type] ?? null;
+}
+
+export function FlippingHusksCard({ card, faceDown = false, small = false, highlight = false, theme }) {
+  const activeTheme = useCardTheme(theme);
   if (!card) return null;
   if (faceDown) return <CardBack small={small} />;
+
+  // ClassicFantasy: render the artwork as a borderless, decoration-free card.
+  // Score cards (and anything without art) fall through to the default rendering.
+  if (activeTheme === 'classic_fantasy') {
+    const img = cfImageFor(card);
+    if (img) return <ClassicFantasyCard card={card} img={img} small={small} highlight={highlight} />;
+  }
+
   if (card.type === 'number') return <NumberCard card={card} small={small} highlight={highlight} />;
   if (card.type === 'modifier' || card.type === 'multiplier') return <ScoreCard card={card} small={small} highlight={highlight} />;
   return <ActionCard card={card} small={small} highlight={highlight} />;
+}
+
+// ─── ClassicFantasy Card (image only) ──────────────────────────────────────────
+
+function ClassicFantasyCard({ card, img, small, highlight }) {
+  const src = `${process.env.PUBLIC_URL}/images/ClassicFantasy/${img}`;
+  // An <img> (rather than a CSS background) lets the browser apply its
+  // highest-quality scaler — far smoother when the artwork is shrunk to card size.
+  return (
+    <div className={`fhcard fhcard-cf${small ? ' fhcard-small' : ''}${highlight ? ' fhcard-highlight' : ''}`}>
+      <img className="fhcard-cf-img" src={src} alt={card.label ?? card.type} draggable={false} />
+    </div>
+  );
 }
 
 // ─── Card Back ─────────────────────────────────────────────────────────────────

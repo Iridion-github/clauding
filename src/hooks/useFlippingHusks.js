@@ -224,6 +224,23 @@ export function useFlippingHusks() {
   const voteLeaveGame     = useCallback(() => socketRef.current?.emit('fh_leave_vote', { leaving: true }), []);
   const withdrawLeaveGame = useCallback(() => socketRef.current?.emit('fh_leave_vote', { leaving: false }), []);
 
+  // Leave the pre-game lobby and return to the start screen (the lobby "Back" button).
+  const leaveRoom = useCallback(() => {
+    socketRef.current?.emit('fh_leave_room');
+    joinInfoRef.current = null; // don't auto-rejoin on a reconnect
+    prevStateRef.current = null;
+    setGameState(null);
+    setRoomPlayers([]);
+    setHostId(null);
+    setIsHost(false);
+    setAnimQueue([]);
+    setPlayAgainVotes({ votes: [], players: [] });
+    setNextRoundVotes({ votes: [], players: [] });
+    setLeaveGameVotes({ votes: [], players: [] });
+    setNextRoundDeadline(null);
+    setError(null);
+  }, []);
+
   const isMyTurn = gameState?.activePlayerId === playerId;
   const self     = gameState ? gameState.players[playerId] : null;
 
@@ -236,7 +253,7 @@ export function useFlippingHusks() {
     playAgainVotes, votePlayAgain,
     nextRoundVotes, voteNextRound, nextRoundDeadline,
     leaveGameVotes, voteLeaveGame, withdrawLeaveGame,
-    joinRoom, startGame, sendAction,
+    joinRoom, startGame, sendAction, leaveRoom,
   };
 }
 

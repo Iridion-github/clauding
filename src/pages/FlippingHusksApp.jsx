@@ -31,6 +31,8 @@ function FlippingHusksAppInner() {
   // neither resolves nor rejects. Flip this after a grace period so the user gets
   // an explanation + a reload instead of an eternal spinner.
   const [discordSlow, setDiscordSlow] = useState(false);
+  // Room code + display name learned from Discord; pre-fills (and locks) the lobby.
+  const [discordInfo, setDiscordInfo] = useState(null);
   const DISCORD_SLOW_MS = 20000;
 
   const {
@@ -42,12 +44,14 @@ function FlippingHusksAppInner() {
     playAgainVotes, votePlayAgain,
     nextRoundVotes, voteNextRound, nextRoundDeadline,
     leaveGameVotes, voteLeaveGame, withdrawLeaveGame,
-    joinRoom, startGame, sendAction,
+    joinRoom, startGame, sendAction, leaveRoom,
   } = useFlippingHusks();
 
-  // When launched as a Discord Activity, do the SDK/OAuth handshake then auto-join
-  // a room keyed to the voice channel, using the Discord username. Everyone who
-  // opens the Activity in the same channel lands in the same room — no codes typed.
+  // When launched as a Discord Activity, do the SDK/OAuth handshake and learn the
+  // room key (voice channel) + display name — but DON'T auto-join. Instead the lobby
+  // shows the normal start screen with those values pre-filled and locked, so the
+  // player can open Settings / Learn to Play before clicking Join. Everyone in the
+  // same channel still converges on the same room (same key), no codes typed.
   useEffect(() => {
     if (!isDiscordActivity) return;
     let cancelled = false;
@@ -55,9 +59,7 @@ function FlippingHusksAppInner() {
     setupDiscord()
       .then(info => {
         if (cancelled || !info) return;
-        const roomId = discordRoomId(info);
-        setCurrentRoomId(roomId);
-        joinRoom(roomId, discordPlayerName(info));
+        setDiscordInfo({ roomId: discordRoomId(info), name: discordPlayerName(info) });
         setDiscordReady(true);
       })
       .catch(err => {
@@ -65,7 +67,7 @@ function FlippingHusksAppInner() {
       })
       .finally(() => clearTimeout(slowTimer));
     return () => { cancelled = true; clearTimeout(slowTimer); };
-  }, [joinRoom]);
+  }, []);
 
   useEffect(() => {
     if (gameState?.phase === 'finished') {
@@ -264,8 +266,10 @@ function FlippingHusksAppInner() {
       roomPlayers={roomPlayers}
       roomId={currentRoomId}
       error={error}
+      discord={discordInfo}
       onJoin={handleJoin}
       onStart={() => startGame(currentRoomId)}
+      onLeaveRoom={leaveRoom}
     />
   );
 }

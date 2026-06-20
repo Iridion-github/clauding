@@ -277,6 +277,32 @@ fh.on('connection', (socket) => {
     maybeCloseRoomOnLeave(meta.roomId);
   });
 
+  // Leave the PRE-GAME lobby (the lobby "Back" button). Mirrors the disconnect
+  // cleanup, but the socket stays connected so the player can rejoin. No-ops once a
+  // game is running — in-game leaving goes through the unanimous fh_leave_vote path.
+  socket.on('fh_leave_room', () => {
+    const meta = fhSocketToRoom[socket.id];
+    if (!meta) return;
+    const room = fhRooms[meta.roomId];
+    if (!room || room.state) return;
+
+    room.players = room.players.filter(p => p.id !== meta.playerId);
+    room.playAgainVotes.delete(meta.playerId);
+    room.nextRoundVotes.delete(meta.playerId);
+    room.leaveGameVotes?.delete(meta.playerId);
+    delete fhSocketToRoom[socket.id];
+    socket.leave(meta.roomId);
+
+    if (room.players.length === 0) {
+      clearNextRoundTimer(room);
+      cancelRoomCleanup(room);
+      delete fhRooms[meta.roomId];
+    } else {
+      if (room.hostId === meta.playerId) room.hostId = room.players[0].id;
+      fh.to(meta.roomId).emit('fh_room_update', { players: roster(room), hostId: room.hostId });
+    }
+  });
+
   socket.on('disconnect', () => {
     const meta = fhSocketToRoom[socket.id];
     delete fhSocketToRoom[socket.id];

@@ -69,13 +69,13 @@ const STEPS = [
           <FlippingHusksCard card={num(0)} faceDown small />
         </CardRow>
         <P>
-          Each round you <b>flip cards</b> to build a score. On your turn you choose
-          to <b style={{ color: '#40c070' }}>Hit</b> (draw another card) or
+          Each round you <b>flip cards</b> to build a score. On your turn you press
+          <b style={{ color: '#40c070' }}> Card</b> (draw another card) or
           <b style={{ color: '#f0c040' }}> Stay</b> (lock in your points and sit out the rest of the round).
         </P>
         <P>The first player to reach <b>200 total points</b> across rounds wins the game.</P>
         <Stack spacing={1} sx={{ width: '100%', maxWidth: 320 }}>
-          <Chip label="HIT means draw a card" sx={{ bgcolor: 'rgba(64,192,112,0.18)', color: '#7fe0a5', fontWeight: 'bold' }} />
+          <Chip label="CARD means draw a card" sx={{ bgcolor: 'rgba(64,192,112,0.18)', color: '#7fe0a5', fontWeight: 'bold' }} />
           <Chip label="STAY means bank your points" sx={{ bgcolor: 'rgba(240,192,64,0.18)', color: '#f0c040', fontWeight: 'bold' }} />
         </Stack>
       </Stack>
@@ -221,7 +221,7 @@ const STEPS = [
         <H>That's the whole game</H>
         <Typography sx={{ fontSize: { xs: 48, sm: 64 }, lineHeight: 1 }}>🌽</Typography>
         <P>
-          <b>Hit</b> to chase points, <b>Stay</b> to keep them. Dodge duplicates,
+          <b>Card</b> to chase points, <b>Stay</b> to keep them. Dodge duplicates,
           hunt for 7 unique numbers, and use action cards to swing the round.
         </P>
         <P>First to <b style={{ color: '#f0c040' }}>200</b> wins. Good luck!</P>

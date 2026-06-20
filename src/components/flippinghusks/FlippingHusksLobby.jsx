@@ -10,32 +10,46 @@ import SchoolIcon from '@mui/icons-material/School';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { LearnToPlay } from './LearnToPlay';
 import { Settings } from './Settings';
+import { isDiscordActivity } from '../../discord/discord';
 
-export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPlayers, roomId, error, onJoin, onStart }) {
+export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPlayers, roomId, error, discord, onJoin, onStart, onLeaveRoom }) {
   const navigate = useNavigate();
-  const [inputRoomId, setInputRoomId] = useState(() => localStorage.getItem('fh_roomCode') ?? '');
-  const [name, setName] = useState(() => localStorage.getItem('fh_playerName') ?? '');
+  // Inside a Discord Activity the room code and name come from Discord and must
+  // NEVER be editable — not on first load, not after leaving a game. Detect it from
+  // the canonical Discord signal (frame_id), so the lock never depends on prop timing.
+  const isDiscord = isDiscordActivity;
+  const [inputRoomId, setInputRoomId] = useState(() => discord?.roomId ?? localStorage.getItem('fh_roomCode') ?? '');
+  const [name, setName] = useState(() => discord?.name ?? localStorage.getItem('fh_playerName') ?? '');
   const [showTutorial, setShowTutorial] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const inRoom = roomPlayers.length > 0;
 
   function handleJoin(e) {
     e.preventDefault();
-    const room = inputRoomId.trim().toUpperCase();
-    const playerName = name.trim();
+    // Discord supplies fixed values; otherwise use (and remember) the typed ones.
+    const room = isDiscord ? (discord?.roomId ?? inputRoomId.trim()) : inputRoomId.trim().toUpperCase();
+    const playerName = isDiscord ? (discord?.name ?? name.trim()) : name.trim();
     if (!playerName || !room) return;
-    localStorage.setItem('fh_roomCode', room);
-    localStorage.setItem('fh_playerName', playerName);
+    if (!isDiscord) {
+      localStorage.setItem('fh_roomCode', room);
+      localStorage.setItem('fh_playerName', playerName);
+    }
     onJoin(room, playerName);
   }
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', px: 3, py: 6, position: 'relative' }}>
-      <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/')} color="inherit"
-        variant="outlined"
-        sx={{ position: 'absolute', top: { xs: 12, sm: 20 }, left: { xs: 12, sm: 20 }, borderColor: 'rgba(255,255,255,0.18)' }}>
-        Back
-      </Button>
+      {/* Back is available everywhere except the Discord start screen itself (the
+          first view, which already exposes Tutorial/Settings). In Discord it returns
+          to that start screen by leaving the room; on the website it goes to the Hub. */}
+      {(!isDiscord || inRoom) && (
+        <Button startIcon={<ArrowBackIcon />}
+          onClick={() => { if (isDiscord) onLeaveRoom?.(); else navigate('/'); }}
+          color="inherit" variant="outlined"
+          sx={{ position: 'absolute', top: { xs: 12, sm: 20 }, left: { xs: 12, sm: 20 }, borderColor: 'rgba(255,255,255,0.18)' }}>
+          Back
+        </Button>
+      )}
 
       <Stack spacing={1} sx={{ alignItems: 'center', mb: 4 }}>
         <Typography variant="h4" color="primary" fontWeight="bold"
@@ -51,9 +65,13 @@ export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPl
         <Box component="form" onSubmit={handleJoin} sx={{ width: '100%', maxWidth: 360 }}>
           <Stack spacing={2.5}>
             <TextField label="Room Code" value={inputRoomId} onChange={e => setInputRoomId(e.target.value.toUpperCase())}
-              slotProps={{ htmlInput: { maxLength: 8 } }} fullWidth placeholder="e.g. GAME01" />
+              slotProps={{ htmlInput: { maxLength: isDiscord ? undefined : 8, readOnly: isDiscord } }}
+              fullWidth placeholder="e.g. GAME01"
+              helperText={isDiscord ? 'Set by your Discord channel' : undefined} />
             <TextField label="Your Name" value={name} onChange={e => setName(e.target.value)}
-              fullWidth placeholder="Enter your name" />
+              slotProps={{ htmlInput: { readOnly: isDiscord } }}
+              fullWidth placeholder="Enter your name"
+              helperText={isDiscord ? 'From your Discord profile' : undefined} />
             {error && <Alert severity="error">{error}</Alert>}
             <Button type="submit" variant="contained" color="primary" size="large" fullWidth
               disabled={!connected || !name.trim() || !inputRoomId.trim()}>

@@ -20,7 +20,7 @@
 
 /* ── Phase: falling ────────────────────────────────────────────────────────── */
 .fhanim-falling {
-  animation: fh-fall 1.2s cubic-bezier(0.3, 0, 0.6, 1) forwards;
+  animation: fh-fall calc(1.2s * var(--fh-anim-speed, 1)) cubic-bezier(0.3, 0, 0.6, 1) forwards;
 }
 
 @keyframes fh-fall {
@@ -37,7 +37,7 @@
 
 /* ── Phase: flip-out (scaleX 1 → 0, face-down disappears) ─────────────────── */
 .fhanim-flip-out {
-  animation: fh-flip-out 0.2s linear forwards;
+  animation: fh-flip-out calc(0.2s * var(--fh-anim-speed, 1)) linear forwards;
 }
 
 @keyframes fh-flip-out {
@@ -47,7 +47,7 @@
 
 /* ── Phase: flip-in (scaleX 0 → 1, face-up appears) ──────────────────────── */
 .fhanim-flip-in {
-  animation: fh-flip-in 0.35s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+  animation: fh-flip-in calc(0.35s * var(--fh-anim-speed, 1)) cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
 }
 
 @keyframes fh-flip-in {
@@ -62,7 +62,7 @@
 
 /* ── Phase: busting (tremble ±10° back and forth) ─────────────────────────── */
 .fhanim-busting {
-  animation: fh-bust 2s ease-in-out forwards;
+  animation: fh-bust calc(2s * var(--fh-anim-speed, 1)) ease-in-out forwards;
 }
 
 /* ── Bust side flashes ─────────────────────────────────────────────────────── */
@@ -78,7 +78,7 @@
     rgba(220, 20, 20, 0.9)  100%
   );
   filter: blur(22px);
-  animation: fh-bust-flash 2s ease-in-out forwards;
+  animation: fh-bust-flash calc(2s * var(--fh-anim-speed, 1)) ease-in-out forwards;
 }
 
 @keyframes fh-bust-flash {
@@ -131,7 +131,7 @@
 
 /* entrance: scale up + fade in */
 .fhanim-sc-show {
-  animation: fh-sc-show 0.4s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+  animation: fh-sc-show calc(0.4s * var(--fh-anim-speed, 1)) cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
 }
 
 @keyframes fh-sc-show {
@@ -141,7 +141,7 @@
 
 /* exit: slide up and fade out over 1 s */
 .fhanim-sc-exit {
-  animation: fh-sc-exit 1s ease-in forwards;
+  animation: fh-sc-exit calc(1s * var(--fh-anim-speed, 1)) ease-in forwards;
 }
 
 @keyframes fh-sc-exit {

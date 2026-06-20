@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { FlippingHusksCard } from './FlippingHusksCard';
+import { currentAnimationFactor } from './settingsStore';
 import './CardDrawAnimation.css';
 
 // Phase timeline (ms):
@@ -31,11 +32,15 @@ export function CardDrawAnimation({ card, isBust, isFlippingHusks, secondChanceC
   }, []);
 
   useEffect(() => {
+    // Scale every phase timing by the saved speed so the JS timeline stays in sync
+    // with the CSS durations (which scale via the --fh-anim-speed variable).
+    const f = currentAnimationFactor();
+    const after = (ms, fn) => setTimeout(fn, ms * f);
     const t = [
-      setTimeout(() => setPhase('flip-out'), 1200),
-      setTimeout(() => setPhase('flip-in'),  1400),
-      setTimeout(() => setPhase('revealed'), 1750),
-      setTimeout(() => {
+      after(1200, () => setPhase('flip-out')),
+      after(1400, () => setPhase('flip-in')),
+      after(1750, () => setPhase('revealed')),
+      after(2000, () => {
         if (isBust) {
           setPhase('busting');
           new Audio('/sounds/busted.mp3').play().catch(() => {});
@@ -44,16 +49,16 @@ export function CardDrawAnimation({ card, isBust, isFlippingHusks, secondChanceC
         } else {
           onDoneRef.current();
         }
-      }, 2000),
+      }),
     ];
-    if (card.type === 'freeze')    t.push(setTimeout(() => new Audio('/sounds/freeze.mp3').play().catch(() => {}), 1750));
-    if (card.type === 'flip_three')   t.push(setTimeout(() => new Audio('/sounds/triple.mp3').play().catch(() => {}), 1750));
-    if (card.type === 'second_chance') t.push(setTimeout(() => new Audio('/sounds/2nd-chance.mp3').play().catch(() => {}), 1750));
-    if (isFlippingHusks) t.push(setTimeout(() => new Audio('/sounds/7-unique-numbers.mp3').play().catch(() => {}), 1750));
-    if (isBust)          t.push(setTimeout(() => onDoneRef.current(), 4000));
+    if (card.type === 'freeze')    t.push(after(1750, () => new Audio('/sounds/freeze.mp3').play().catch(() => {})));
+    if (card.type === 'flip_three')   t.push(after(1750, () => new Audio('/sounds/triple.mp3').play().catch(() => {})));
+    if (card.type === 'second_chance') t.push(after(1750, () => new Audio('/sounds/2nd-chance.mp3').play().catch(() => {})));
+    if (isFlippingHusks) t.push(after(1750, () => new Audio('/sounds/7-unique-numbers.mp3').play().catch(() => {})));
+    if (isBust)          t.push(after(4000, () => onDoneRef.current()));
     if (secondChanceCard) {
-      t.push(setTimeout(() => setPhase('sc-exit'), 4000));
-      t.push(setTimeout(() => onDoneRef.current(), 5000));
+      t.push(after(4000, () => setPhase('sc-exit')));
+      t.push(after(5000, () => onDoneRef.current()));
     }
     return () => t.forEach(clearTimeout);
     // card/isFlippingHusks are fixed for this animation's lifetime — intentionally omitted

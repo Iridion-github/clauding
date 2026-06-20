@@ -9,9 +9,12 @@ import { CardDrawAnimation } from '../components/flippinghusks/CardDrawAnimation
 import { ReshuffleAnimation } from '../components/flippinghusks/ReshuffleAnimation';
 import { isDiscordActivity, setupDiscord, discordRoomId, discordPlayerName } from '../discord/discord';
 import { CardThemeProvider } from '../components/flippinghusks/CardThemeContext';
-import { loadSettings, musicSrcFor, BGM_VOLUME } from '../components/flippinghusks/settingsStore';
+import { loadSettings, musicSrcFor, BGM_VOLUME, applyAnimationSpeed } from '../components/flippinghusks/settingsStore';
 
 export function FlippingHusksApp() {
+  // Apply the saved animation speed once up front so the CSS duration variable is
+  // set before any animation can render (Settings → Save updates it live too).
+  useEffect(() => { applyAnimationSpeed(loadSettings().animationSpeed); }, []);
   // Provide the saved card theme to every card rendered in the lobby, board and animations.
   return (
     <CardThemeProvider>

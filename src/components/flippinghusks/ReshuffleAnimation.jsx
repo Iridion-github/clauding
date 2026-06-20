@@ -1,15 +1,18 @@
 import { useEffect } from 'react';
+import { currentAnimationFactor } from './settingsStore';
 import './ReshuffleAnimation.css';
 
 // Offset values (-3 to 3) control how far each card fans out from center
 const CARDS = [-3, -2, -1, 0, 1, 2, 3];
 
 export function ReshuffleAnimation({ onDone }) {
+  // Scale the timeline and the staggered card delays by the saved animation speed.
+  const factor = currentAnimationFactor();
   useEffect(() => {
     new Audio('/sounds/shuffle.mp3').play().catch(() => {});
-    const t = setTimeout(onDone, 4000);
+    const t = setTimeout(onDone, 4000 * factor);
     return () => clearTimeout(t);
-  }, [onDone]);
+  }, [onDone, factor]);
 
   return (
     <div className="fh-rs-overlay">
@@ -21,7 +24,7 @@ export function ReshuffleAnimation({ onDone }) {
               className="fh-rs-card"
               style={{
                 '--offset': offset,
-                animationDelay: `${i * 90}ms`,
+                animationDelay: `${i * 90 * factor}ms`,
               }}
             />
           ))}

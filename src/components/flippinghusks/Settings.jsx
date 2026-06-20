@@ -2,10 +2,13 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Dialog, Box, Button, Typography, Stack,
   FormControlLabel, Checkbox, Collapse,
-  FormControl, InputLabel, Select, MenuItem,
+  FormControl, InputLabel, Select, MenuItem, Slider,
 } from '@mui/material';
 import { FlippingHusksCard } from './FlippingHusksCard';
-import { loadSettings, saveSettings, musicSrcFor, BGM_VOLUME } from './settingsStore';
+import {
+  loadSettings, saveSettings, musicSrcFor, BGM_VOLUME,
+  ANIMATION_SPEEDS, applyAnimationSpeed,
+} from './settingsStore';
 import { useSetCardTheme } from './CardThemeContext';
 
 // Every distinct card in the 94-card deck (one of each), in deck order:
@@ -76,6 +79,7 @@ export function Settings({ open, onClose }) {
   function handleSave() {
     saveSettings(settings);
     setCardTheme(settings.theme); // apply the chosen card theme immediately
+    applyAnimationSpeed(settings.animationSpeed); // update the live animation-speed variable
     onClose();
   }
 
@@ -112,6 +116,23 @@ export function Settings({ open, onClose }) {
             </Typography>
 
             <Stack spacing={3} sx={{ width: '100%' }}>
+              {/* Animations Speed — discrete slider: Default → Faster → Fastest.
+                  Each step halves the duration of every game animation. */}
+              <Box sx={{ width: '100%' }}>
+                <Typography sx={{ mb: 1 }}>Animations Speed</Typography>
+                <Box sx={{ px: 1.5 }}>
+                  <Slider
+                    value={Math.max(0, ANIMATION_SPEEDS.findIndex(s => s.value === settings.animationSpeed))}
+                    onChange={(e, idx) => set('animationSpeed', ANIMATION_SPEEDS[idx].value)}
+                    min={0}
+                    max={ANIMATION_SPEEDS.length - 1}
+                    step={null}
+                    marks={ANIMATION_SPEEDS.map((s, i) => ({ value: i, label: s.label }))}
+                    color="primary"
+                  />
+                </Box>
+              </Box>
+
               {/* Background Music */}
               <Box sx={{ width: '100%' }}>
                 <FormControlLabel

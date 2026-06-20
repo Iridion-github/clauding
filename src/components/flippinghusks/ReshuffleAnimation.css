@@ -8,10 +8,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* fade in then hold, fade out in the final 0.45s */
+  /* fade in then hold, fade out in the final 0.45s (delay scales too so the exit
+     stays aligned with the JS onDone timeout at every animation speed) */
   animation:
-    fh-rs-fade-in  0.35s ease forwards,
-    fh-rs-fade-out 0.45s ease 3.55s forwards;
+    fh-rs-fade-in  calc(0.35s * var(--fh-anim-speed, 1)) ease forwards,
+    fh-rs-fade-out calc(0.45s * var(--fh-anim-speed, 1)) ease calc(3.55s * var(--fh-anim-speed, 1)) forwards;
 }
 
 @keyframes fh-rs-fade-in {
@@ -54,7 +55,7 @@
     0 2px 8px rgba(0, 0, 0, 0.55),
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
   transform-origin: center bottom;
-  animation: fh-rs-shuffle 1.6s ease-in-out infinite;
+  animation: fh-rs-shuffle calc(1.6s * var(--fh-anim-speed, 1)) ease-in-out infinite;
 }
 
 @keyframes fh-rs-shuffle {
@@ -97,7 +98,7 @@
   letter-spacing: 2px;
   text-align: center;
   text-shadow: 0 0 24px rgba(240, 192, 64, 0.55);
-  animation: fh-rs-label-pulse 1.2s ease-in-out infinite;
+  animation: fh-rs-label-pulse calc(1.2s * var(--fh-anim-speed, 1)) ease-in-out infinite;
 }
 
 @keyframes fh-rs-label-pulse {

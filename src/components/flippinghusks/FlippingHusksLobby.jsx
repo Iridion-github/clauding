@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box, Button, TextField, Typography, Stack,
-  List, ListItem, ListItemText, Chip, Alert,
+  List, ListItem, ListItemText, Chip, Alert, IconButton,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import StarIcon from '@mui/icons-material/Star';
@@ -39,23 +39,26 @@ export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPl
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', px: 3, py: 6, position: 'relative' }}>
-      {/* Back is available everywhere except the Discord start screen itself (the
-          first view, which already exposes Tutorial/Settings). In Discord it returns
-          to that start screen by leaving the room; on the website it goes to the Hub. */}
-      {(!isDiscord || inRoom) && (
-        <Button startIcon={<ArrowBackIcon />}
-          onClick={() => { if (isDiscord) onLeaveRoom?.(); else navigate('/'); }}
-          color="inherit" variant="outlined"
-          sx={{ position: 'absolute', top: { xs: 12, sm: 20 }, left: { xs: 12, sm: 20 }, borderColor: 'rgba(255,255,255,0.18)' }}>
-          Back
-        </Button>
-      )}
-
-      <Stack spacing={1} sx={{ alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" color="primary" fontWeight="bold"
-          sx={{ textShadow: '0 2px 16px rgba(240,192,64,0.3)' }}>
-          Flipping Husks
-        </Typography>
+      <Stack spacing={1} sx={{ alignItems: 'center', mb: 4, width: '100%', maxWidth: 360 }}>
+        <Box sx={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center' }}>
+          {/* Back is available everywhere except the Discord start screen itself (the
+              first view, which already exposes Tutorial/Settings). While in a room it
+              just leaves the room, returning to the Room Code / Your Name screen; only
+              from that join screen (website) does it go all the way back to the Game Lab.
+              Pinned to the left edge of the column and vertically centered on the title. */}
+          {(!isDiscord || inRoom) && (
+            <IconButton aria-label="Back"
+              onClick={() => { if (inRoom) onLeaveRoom?.(); else navigate('/'); }}
+              color="inherit"
+              sx={{ position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)', border: '1px solid rgba(255,255,255,0.18)' }}>
+              <ArrowBackIcon />
+            </IconButton>
+          )}
+          <Typography variant="h4" color="primary" fontWeight="bold"
+            sx={{ textShadow: '0 2px 16px rgba(240,192,64,0.3)' }}>
+            Flipping Husks
+          </Typography>
+        </Box>
         <Typography variant="body2" color={connected ? 'secondary.main' : 'text.secondary'}>
           {connected ? '● Connected' : '○ Connecting…'}
         </Typography>

@@ -12,6 +12,27 @@ import { LearnToPlay } from './LearnToPlay';
 import { Settings } from './Settings';
 import { isDiscordActivity } from '../../discord/discord';
 
+// Emerald "material" of the in-game Card button (.fhaction-btn-hit in
+// FlippingHusksBoard.css), mirrored here so the Join Room / Start buttons match it.
+const CARD_BTN_BG =
+  'linear-gradient(160deg, rgba(255,255,255,0.38) 0%, rgba(255,255,255,0.06) 20%, transparent 44%),' +
+  'radial-gradient(125% 80% at 28% 8%, rgba(130,255,205,0.32), transparent 55%),' +
+  'radial-gradient(110% 90% at 82% 105%, rgba(0,70,45,0.6), transparent 60%),' +
+  'linear-gradient(150deg, rgba(7,66,43,0.90) 0%, rgba(6,92,58,0.90) 46%, rgba(3,46,30,0.94) 100%)';
+const CARD_BTN_SHADOW =
+  'inset 0 1px 1px rgba(220,255,235,0.55), inset 0 -9px 20px rgba(0,0,0,0.45), 0 4px 22px rgba(10,120,72,0.5)';
+const CARD_BTN_SX = {
+  fontWeight: 'bold',
+  borderRadius: '14px',
+  color: '#d8ffe9',
+  textShadow: '0 1px 4px rgba(0,0,0,0.55)',
+  border: '1px solid rgba(130,255,205,0.28)',
+  background: CARD_BTN_BG,
+  boxShadow: CARD_BTN_SHADOW,
+  '&:hover': { background: CARD_BTN_BG, boxShadow: CARD_BTN_SHADOW, filter: 'brightness(1.06)' },
+  '&.Mui-disabled': { color: '#d8ffe9', opacity: 0.35 },
+};
+
 export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPlayers, roomId, error, discord, onJoin, onStart, onLeaveRoom }) {
   const navigate = useNavigate();
   // Inside a Discord Activity the room code and name come from Discord and must
@@ -38,7 +59,7 @@ export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPl
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', px: 3, py: 6, position: 'relative' }}>
+    <Box className="fh-bg" sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', px: 3, py: 6, position: 'relative' }}>
       <Stack spacing={1} sx={{ alignItems: 'center', mb: 4, width: '100%', maxWidth: 360 }}>
         <Box sx={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center' }}>
           {/* Back is available everywhere except the Discord start screen itself (the
@@ -76,17 +97,17 @@ export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPl
               fullWidth placeholder="Enter your name"
               helperText={isDiscord ? 'From your Discord profile' : undefined} />
             {error && <Alert severity="error">{error}</Alert>}
-            <Button type="submit" variant="contained" color="primary" size="large" fullWidth
-              disabled={!connected || !name.trim() || !inputRoomId.trim()}>
+            <Button type="submit" size="large" fullWidth
+              disabled={!connected || !name.trim() || !inputRoomId.trim()}
+              sx={CARD_BTN_SX}>
               Join Room
             </Button>
             <Button variant="contained" color="secondary" size="large" fullWidth
               startIcon={<SchoolIcon />} onClick={() => setShowTutorial(true)}>
               Learn to Play
             </Button>
-            <Button variant="outlined" color="inherit" size="large" fullWidth
-              startIcon={<SettingsIcon />} onClick={() => setShowSettings(true)}
-              sx={{ borderColor: 'rgba(255,255,255,0.18)' }}>
+            <Button variant="contained" color="primary" size="large" fullWidth
+              startIcon={<SettingsIcon />} onClick={() => setShowSettings(true)}>
               Settings
             </Button>
           </Stack>
@@ -123,8 +144,7 @@ export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPl
             {error && <Alert severity="error">{error}</Alert>}
 
             {isHost ? (
-              <Button variant="contained" color={roomPlayers.length < 2 ? 'warning' : 'primary'} size="large" fullWidth
-                onClick={onStart}>
+              <Button size="large" fullWidth onClick={onStart} sx={CARD_BTN_SX}>
                 {roomPlayers.length < 2 ? 'Start (Debug Mode)' : `Start Game (${roomPlayers.length} players)`}
               </Button>
             ) : (

@@ -52,6 +52,27 @@ export function musicSrcFor(track) {
   return `/music/${MUSIC_FILES[track] ?? MUSIC_FILES.default}`;
 }
 
+// Card theme → full-screen background image in public/images/<theme>/.
+// Each theme owns its own backdrop; ClassicFantasy's file will be added later, so
+// until it exists that theme simply falls back to the base colour behind the image.
+const BACKGROUND_FILES = {
+  default: '/images/default/bg.png',
+  classic_fantasy: '/images/ClassicFantasy/bg.png',
+};
+
+// Public URL of the background image for a theme (falls back to the default theme).
+export function backgroundSrcFor(theme) {
+  return BACKGROUND_FILES[theme] ?? BACKGROUND_FILES.default;
+}
+
+// Publish the theme's background as a CSS custom property on <html>. Interfaces
+// paint it via `background-image: var(--fh-bg-image)` together with `cover`/`center`,
+// so the single image scales to fit any client resolution and aspect ratio.
+// Called at app start and whenever the theme is saved.
+export function applyBackground(theme) {
+  document.documentElement.style.setProperty('--fh-bg-image', `url("${backgroundSrcFor(theme)}")`);
+}
+
 // Read persisted settings, falling back to defaults for anything missing/corrupt.
 export function loadSettings() {
   try {

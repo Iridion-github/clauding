@@ -9,12 +9,16 @@ import { CardDrawAnimation } from '../components/flippinghusks/CardDrawAnimation
 import { ReshuffleAnimation } from '../components/flippinghusks/ReshuffleAnimation';
 import { isDiscordActivity, setupDiscord, discordRoomId, discordPlayerName } from '../discord/discord';
 import { CardThemeProvider } from '../components/flippinghusks/CardThemeContext';
-import { loadSettings, musicSrcFor, BGM_VOLUME, applyAnimationSpeed } from '../components/flippinghusks/settingsStore';
+import { loadSettings, musicSrcFor, BGM_VOLUME, applyAnimationSpeed, applyBackground } from '../components/flippinghusks/settingsStore';
 
 export function FlippingHusksApp() {
-  // Apply the saved animation speed once up front so the CSS duration variable is
-  // set before any animation can render (Settings → Save updates it live too).
-  useEffect(() => { applyAnimationSpeed(loadSettings().animationSpeed); }, []);
+  // Apply the saved animation speed + themed background once up front so their CSS
+  // variables are set before anything renders (Settings → Save updates them live too).
+  useEffect(() => {
+    const s = loadSettings();
+    applyAnimationSpeed(s.animationSpeed);
+    applyBackground(s.theme);
+  }, []);
   // Provide the saved card theme to every card rendered in the lobby, board and animations.
   return (
     <CardThemeProvider>
@@ -230,7 +234,7 @@ function FlippingHusksAppInner() {
   // Hold the lobby back until the Discord handshake finishes (or surface its error).
   if (isDiscordActivity && !discordReady) {
     return (
-      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', px: 3 }}>
+      <Box className="fh-bg" sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', px: 3 }}>
         <Stack spacing={2} sx={{ alignItems: 'center', textAlign: 'center' }}>
           {discordError ? (
             <>

@@ -270,7 +270,7 @@ export function LearnToPlay({ open, onClose }) {
         },
       }}
     >
-      <Box sx={{
+      <Box className="fh-bg" sx={{
         display: 'flex', flexDirection: 'column', height: '100%',
         // Respect notches / home indicators on phones.
         pt: 'env(safe-area-inset-top)',

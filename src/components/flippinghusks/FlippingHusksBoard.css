@@ -4,7 +4,17 @@
   grid-template-columns: 1fr 300px;
   height: 100vh;
   overflow: hidden;
-  background: #0d1117;
+  /* Themed backdrop (see .fh-bg): the active theme's image scaled to cover any
+     resolution/ratio, under a dark overlay for contrast, with #0d1117 showing
+     through until it loads. */
+  background-color: #0d1117;
+  background-image:
+    linear-gradient(var(--fh-bg-overlay), var(--fh-bg-overlay)),
+    var(--fh-bg-image, none);
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: #eee;
   font-family: 'Georgia', serif;
 }

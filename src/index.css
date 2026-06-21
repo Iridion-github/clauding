@@ -11,3 +11,28 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Darkening veil laid over the theme background for contrast. It's the first
+   background-image layer (top-most), so raising this alpha makes every backdrop
+   darker in one place. */
+:root {
+  --fh-bg-overlay: rgba(0, 0, 0, 0.2);
+}
+
+/* Shared themed backdrop for the main game screens. The image comes from the
+   active theme via the --fh-bg-image variable (set on <html> by applyBackground).
+   A flat dark overlay (--fh-bg-overlay) is stacked on top of it for contrast.
+   `cover` + `center` make the one image adapt to any client: it scales while
+   preserving its aspect ratio to fully cover the viewport whatever the resolution
+   or screen ratio, keeping the centre in view and cropping only the overflow.
+   The base colour shows through until the image loads (or if a theme has none). */
+.fh-bg {
+  background-color: #111111;
+  background-image:
+    linear-gradient(var(--fh-bg-overlay), var(--fh-bg-overlay)),
+    var(--fh-bg-image, none);
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}

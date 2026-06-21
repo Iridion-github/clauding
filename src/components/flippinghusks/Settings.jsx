@@ -7,7 +7,7 @@ import {
 import { FlippingHusksCard } from './FlippingHusksCard';
 import {
   loadSettings, saveSettings, musicSrcFor, BGM_VOLUME,
-  ANIMATION_SPEEDS, applyAnimationSpeed,
+  ANIMATION_SPEEDS, applyAnimationSpeed, applyBackground,
 } from './settingsStore';
 import { useSetCardTheme } from './CardThemeContext';
 
@@ -54,6 +54,13 @@ export function Settings({ open, onClose }) {
     if (open) setSettings(loadSettings());
   }, [open]);
 
+  // Preview the themed background live as the theme is changed (it's a global,
+  // so the change is visible behind this dialog too). handleClose reverts it to
+  // the saved theme when the dialog is dismissed without saving.
+  useEffect(() => {
+    if (open) applyBackground(settings.theme);
+  }, [open, settings.theme]);
+
   // Stop the preview player when Background Music is switched off (the player is
   // hidden by the Collapse, so it must not keep playing in the background).
   useEffect(() => {
@@ -79,14 +86,21 @@ export function Settings({ open, onClose }) {
   function handleSave() {
     saveSettings(settings);
     setCardTheme(settings.theme); // apply the chosen card theme immediately
+    applyBackground(settings.theme); // swap the themed background to match
     applyAnimationSpeed(settings.animationSpeed); // update the live animation-speed variable
+    onClose();
+  }
+
+  // Cancel / dismiss: drop the live background preview back to the saved theme.
+  function handleClose() {
+    applyBackground(loadSettings().theme);
     onClose();
   }
 
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       fullScreen
       slotProps={{
         paper: {
@@ -97,7 +111,7 @@ export function Settings({ open, onClose }) {
         },
       }}
     >
-      <Box sx={{
+      <Box className="fh-bg" sx={{
         display: 'flex', flexDirection: 'column', height: '100%',
         pt: 'env(safe-area-inset-top)',
         pb: 'env(safe-area-inset-bottom)',
@@ -226,7 +240,7 @@ export function Settings({ open, onClose }) {
         {/* Footer: Cancel / Save */}
         <Stack direction="row" spacing={1.5} sx={{ px: { xs: 2, sm: 3 }, py: 2, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
           <Button
-            onClick={onClose}
+            onClick={handleClose}
             color="inherit"
             variant="outlined"
             sx={{ flex: 1, borderColor: 'rgba(255,255,255,0.18)' }}

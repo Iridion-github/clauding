@@ -111,14 +111,15 @@ function CardBack({ small }) {
 }
 
 // ─── ClassicFantasy Card Back ──────────────────────────────────────────────────
-// Gold-on-black intricate lattice with an ornamental frame; title in a medieval
-// (Cinzel) face for the fantasy feel.
+// The cardBack.png artwork with the gold UnifrakturCook Light title overlaid.
 function ClassicFantasyCardBack({ small }) {
+  const src = `${process.env.PUBLIC_URL}/images/ClassicFantasy/cardBack.png`;
   return (
     <div className={`fhcard fhcard-cf-back${small ? ' fhcard-small' : ''}`}>
+      <img className="fhcard-cf-img" src={src} alt="card back" draggable={false} />
       <div className="fhback-inner">
-        <span className="fhcf-back-line">FLIPPING</span>
-        <span className="fhcf-back-line">HUSKS</span>
+        <span className="fhcf-back-line">Flipping</span>
+        <span className="fhcf-back-line">Eberron</span>
       </div>
     </div>
   );

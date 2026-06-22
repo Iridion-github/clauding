@@ -56,7 +56,7 @@ export function musicSrcFor(track) {
 // Each theme owns its own backdrop; ClassicFantasy's file will be added later, so
 // until it exists that theme simply falls back to the base colour behind the image.
 const BACKGROUND_FILES = {
-  default: '/images/default/bg.png',
+  default: '/images/Default/bg.png',
   classic_fantasy: '/images/ClassicFantasy/bg.png',
 };
 

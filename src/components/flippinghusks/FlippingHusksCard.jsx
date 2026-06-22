@@ -5,20 +5,21 @@ import { useCardTheme } from './CardThemeContext';
 const VINE = [null,'#9e9e9e','#aed136','#e91e63','#26c6da','#00897b','#6a1b9a','#8d6e63','#43a047','#f57c00','#c62828','#1565c0','#455a64'];
 const RAINBOW_STOPS = ['#ff3333','#ff9900','#ffee00','#33cc33','#3399ff','#cc33ff','#ff3399'];
 
-// ─── ClassicFantasy theme: card face → image file in public/images/ClassicFantasy ──
+// ─── ClassicFantasy theme: card face → image file in public/images/ClassicFantasy/cards ──
 // Only number cards (0–12) and the three action cards have artwork. Score cards
 // (modifiers / ×2) and the card back fall back to the default look.
+// These textless images carry no baked-in number/text — those are overlaid separately.
 const CF_NUMBER_IMG = {
-  0: '0Beholder0.png',     1: '1Ashari1.png',       2: '2Ecate2.png',
-  3: '3Echo3.png',         4: '4Frederick4.png',    5: '5Leyah5.png',
-  6: '6Morzan6.png',       7: '7Vikas7.png',        8: '8DisplacerBeast8.png',
-  9: '9Mimic9.png',        10: '10Bagpipes10.png',  11: '11Potion11.png',
-  12: '12Dragon12.png',
+  0: 'Bagpipes.png',       1: 'Potion.png',         2: 'Mimic.png',
+  3: 'Beholder.png',       4: 'DisplacerBeast.png', 5: 'Dragon.png',
+  6: 'Echo.png',           7: 'Leyah.png',          8: 'Frederick.png',
+  9: 'Vikas.png',          10: 'Morzan.png',        11: 'Ecate.png',
+  12: 'Ashari.png',
 };
 const CF_ACTION_IMG = {
-  freeze: 'Freeze.png',
-  flip_three: 'FlipThree.png',
-  second_chance: 'SecondChance.png',
+  freeze: 'FreezeTextless.png',
+  flip_three: 'FlipThreeTextless.png',
+  second_chance: 'SecondChanceTextless.png',
 };
 
 function cfImageFor(card) {
@@ -52,7 +53,7 @@ export function FlippingHusksCard({ card, faceDown = false, small = false, highl
 // ─── ClassicFantasy Card (image only) ──────────────────────────────────────────
 
 function ClassicFantasyCard({ card, img, small, highlight }) {
-  const src = `${process.env.PUBLIC_URL}/images/ClassicFantasy/${img}`;
+  const src = `${process.env.PUBLIC_URL}/images/ClassicFantasy/cards/${img}`;
   // An <img> (rather than a CSS background) lets the browser apply its
   // highest-quality scaler — far smoother when the artwork is shrunk to card size.
   return (

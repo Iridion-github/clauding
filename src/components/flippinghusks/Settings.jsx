@@ -33,6 +33,10 @@ const PREVIEW_CARDS = [
 // in the settings column (72 × 1.45 ≈ 104px).
 const CARD_SCALE = 1.45;
 
+// Enlargement factor for a card shown in the zoomed viewer overlay (applied to the
+// 140×200 base card).
+const ZOOM = 2.4;
+
 const MUSIC_TRACKS = [
   { value: 'default', label: 'Default' },
   { value: 'classic_fantasy', label: 'Classic Fantasy' },
@@ -48,10 +52,15 @@ export function Settings({ open, onClose }) {
   const [settings, setSettings] = useState(loadSettings);
   const setCardTheme = useSetCardTheme();
   const previewAudioRef = useRef(null);
+  // The preview card currently shown enlarged in the viewer overlay (null = closed).
+  const [zoomedCard, setZoomedCard] = useState(null);
 
   // Re-sync from storage each time the page is opened, so it reflects what was last saved.
   useEffect(() => {
-    if (open) setSettings(loadSettings());
+    if (open) {
+      setSettings(loadSettings());
+      setZoomedCard(null); // never reopen onto a stale card viewer
+    }
   }, [open]);
 
   // Preview the themed background live as the theme is changed (it's a global,
@@ -221,9 +230,12 @@ export function Settings({ open, onClose }) {
                   {PREVIEW_CARDS.map(({ card, faceDown }, i) => (
                     <Box
                       key={i}
+                      onClick={() => setZoomedCard({ card, faceDown })}
                       sx={{
                         width: 72 * CARD_SCALE,
                         height: 104 * CARD_SCALE,
+                        cursor: 'pointer',
+                        '& .fhcard, & .fhcard *': { cursor: 'pointer' },
                         '& > .fhcard': { transform: `scale(${CARD_SCALE})`, transformOrigin: 'top left' },
                         '& > .fhcard:hover': { transform: `scale(${CARD_SCALE}) translateY(-3px)` },
                       }}
@@ -256,6 +268,37 @@ export function Settings({ open, onClose }) {
             Save
           </Button>
         </Stack>
+
+        {/* Card viewer: clicking a preview card enlarges it centered over a dark
+            backdrop. Clicking anywhere (the card or the backdrop) closes it. */}
+        {zoomedCard && (
+          <Box
+            onClick={() => setZoomedCard(null)}
+            sx={{
+              position: 'fixed', inset: 0, zIndex: 2000,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(0,0,0,0.8)',
+              cursor: 'zoom-out',
+            }}
+          >
+            {/* Fixed footprint (140×200 base × ZOOM) so every card — regardless of
+                type or theme — occupies exactly the same width/height. The inner card
+                is scaled to fill it, and the scale is held on hover so it can't snap
+                back to its natural size. */}
+            <Box sx={{
+              width: 140 * ZOOM, height: 200 * ZOOM,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              '& .fhcard': { transform: `scale(${ZOOM})`, transformOrigin: 'center' },
+              '& .fhcard:hover': { transform: `scale(${ZOOM})` },
+            }}>
+              <FlippingHusksCard
+                card={zoomedCard.card}
+                faceDown={zoomedCard.faceDown}
+                theme={settings.theme}
+              />
+            </Box>
+          </Box>
+        )}
       </Box>
     </Dialog>
   );

@@ -24,7 +24,7 @@ function truncateName(name, max = 16) {
   return name.length > max ? name.slice(0, max - 1) + '…' : name;
 }
 
-export function FlippingHusksBoard({ gameState, playerId, connected = true, roomPlayers = [], isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain, nextRoundVotes, voteNextRound, nextRoundDeadline, leaveGameVotes = { votes: [], players: [] }, voteLeaveGame, withdrawLeaveGame, animating }) {
+export function FlippingHusksBoard({ gameState, playerId, connected = true, roomPlayers = [], isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain, nextRoundVotes, voteNextRound, nextRoundDeadline, leaveGameVotes = { votes: [], players: [] }, voteLeaveGame, withdrawLeaveGame, onLeaveGame, animating }) {
   const { players, playerOrder, activePlayerId, phase, round, drawPile, discardCount, log, winner, pendingAction } = gameState;
   const offlineIds = new Set(roomPlayers.filter(p => p.connected === false).map(p => p.id));
   const self = players[playerId];
@@ -212,6 +212,7 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
           hasVotedNextRound={hasVotedNextRound}
           voteNextRound={voteNextRound}
           nextRoundVoteCount={nextRoundVotes.votes.length}
+          onLeaveGame={onLeaveGame}
         />
       )}
 
@@ -266,7 +267,7 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
 }
 
 // ── Fixed bottom action bar ───────────────────────────────────────────────────
-function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePlayerId, winner, activePlayerOffline, sendAction, hasVotedPlayAgain, votePlayAgain, playAgainVoteCount, hasVotedNextRound, voteNextRound, nextRoundVoteCount }) {
+function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePlayerId, winner, activePlayerOffline, sendAction, hasVotedPlayAgain, votePlayAgain, playAgainVoteCount, hasVotedNextRound, voteNextRound, nextRoundVoteCount, onLeaveGame }) {
   if (phase === 'round_end') {
     return (
       <div className="fhaction-bar">
@@ -292,6 +293,14 @@ function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePla
         <Scoreboard players={players} playerOrder={playerOrder} final />
         <button
           className="fhaction-btn fhaction-btn-stay"
+          onClick={onLeaveGame}
+        >
+          <span className="fhaction-btn-icon">←</span>
+          <span className="fhaction-btn-main">Leave</span>
+          <span className="fhaction-btn-sub">Back to start screen</span>
+        </button>
+        <button
+          className="fhaction-btn fhaction-btn-hit"
           onClick={votePlayAgain}
           disabled={hasVotedPlayAgain}
         >

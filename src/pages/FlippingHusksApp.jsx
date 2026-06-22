@@ -202,6 +202,7 @@ function FlippingHusksAppInner() {
           leaveGameVotes={leaveGameVotes}
           voteLeaveGame={voteLeaveGame}
           withdrawLeaveGame={withdrawLeaveGame}
+          onLeaveGame={leaveRoom}
           animating={currentAnim !== null}
         />
         {currentAnim?.type === 'reshuffle' && (

@@ -22,6 +22,9 @@ export const SOUND_COST = 10;
 // single place to set the overall Soundboard volume.
 export const SOUNDBOARD_VOLUME = 1.4; // master makeup gain (the one volume knob)
 
+// Hard cap on how long any clip may play — longer clips are cut off at this mark.
+export const SOUNDBOARD_MAX_MS = 8000;
+
 let audioCtx = null;
 let entryNode = null; // graph input — the compressor every clip connects into
 
@@ -65,6 +68,14 @@ export function playSoundUrl(url) {
       // If routing fails the element still plays on its own (just unleveled).
     }
   }
+  // Force-stop at the max duration so no clip can run longer than the cap. We fire a
+  // synthetic 'ended' so listeners (e.g. the room's single-sound lock, which waits
+  // for 'ended') still release. A natural finish clears the timer first.
+  const cap = setTimeout(() => {
+    audio.pause();
+    audio.dispatchEvent(new Event('ended'));
+  }, SOUNDBOARD_MAX_MS);
+  audio.addEventListener('ended', () => clearTimeout(cap), { once: true });
   audio.play().catch(() => {});
   return audio;
 }

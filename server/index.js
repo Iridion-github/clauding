@@ -34,7 +34,7 @@ const NEXT_ROUND_COUNTDOWN_MS = 30000;
 // it never reports the sound finishing (e.g. they disconnect mid-clip).
 const FH_EMOTES = new Set(['anger', 'mockery', 'jingle']);
 const SOUND_COST = 10;
-const SOUND_LOCK_MAX_MS = 12000;
+const SOUND_LOCK_MAX_MS = 9000; // safety release if the player never reports 'ended' (clips are capped at 8s client-side)
 const CHEAT_SP_BONUS = 10; // SP granted each time the hidden cheat "+" button is pressed
 
 // Each emote plays a RANDOM clip from public/sounds/soundboard/<emote>/. The pick

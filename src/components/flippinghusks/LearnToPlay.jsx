@@ -6,6 +6,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { FlippingHusksCard } from './FlippingHusksCard';
+import { EMOTES, SOUND_COST } from './emotes';
 
 // ── Card builders (match the shape FlippingHusksCard expects) ──────────────────
 const num    = v => ({ type: 'number', value: v, label: String(v) });
@@ -211,6 +212,45 @@ const STEPS = [
           </Stack>
         </Box>
         <P>The x2 only multiplies your <b>numbers</b>. Bonus cards are added afterward.</P>
+      </Stack>
+    ),
+  },
+  {
+    title: 'Soundboard',
+    render: () => (
+      <Stack spacing={2} sx={{ alignItems: 'center', width: '100%' }}>
+        <H>Taunt the table</H>
+        <Stack direction="row" spacing={2.5} sx={{ justifyContent: 'center' }}>
+          {EMOTES.map(({ key, label, icon, color }) => (
+            <Stack key={key} spacing={0.75} sx={{ alignItems: 'center' }}>
+              <Box sx={{
+                width: 54, height: 54, borderRadius: '50%', bgcolor: color,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 27, boxShadow: '0 4px 14px rgba(0,0,0,0.5)',
+              }}>
+                <span aria-hidden="true">{icon}</span>
+              </Box>
+              <Typography sx={{ fontSize: 12.5 }} color="text.secondary">{label}</Typography>
+            </Stack>
+          ))}
+        </Stack>
+        <P>
+          Open the <b>Soundboard</b> with the round button on the left during a game.
+          Each button plays a <b>random</b> sound that <b>every player hears</b>:
+          <b style={{ color: '#ff7b7b' }}> Anger</b>,
+          <b style={{ color: '#f5c518' }}> Mockery</b> or a
+          <b style={{ color: '#6fb3ff' }}> Jingle</b>.
+        </P>
+        <P>
+          Sounds cost <b style={{ color: '#ffe08a' }}>Sound Points (SP)</b>. You start
+          each game with <b>10 SP</b>, earn <b>+5 SP</b> every time you draw a card, and
+          gain <b>+10 SP</b> whenever you're hit by a <b>Freeze</b> or <b>Flip Three</b>.
+          Your SP is shown whenever the Soundboard is open.
+        </P>
+        <Stack spacing={1} sx={{ width: '100%', maxWidth: 340 }}>
+          <Chip label={`Each sound costs ${SOUND_COST} SP`} sx={{ bgcolor: 'rgba(255,224,138,0.18)', color: '#ffe08a', fontWeight: 'bold' }} />
+          <Chip label="Only one sound plays at a time, table-wide" sx={{ bgcolor: 'rgba(255,255,255,0.08)', color: 'text.secondary', fontWeight: 'bold' }} />
+        </Stack>
       </Stack>
     ),
   },

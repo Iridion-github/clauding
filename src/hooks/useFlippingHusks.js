@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
+import { playSoundUrl } from '../components/flippinghusks/emotes';
 
 const SERVER_URL = process.env.NODE_ENV === 'production'
   ? `${window.location.origin}/flippinghusks`
@@ -49,6 +50,7 @@ export function useFlippingHusks() {
   const [nextRoundVotes, setNextRoundVotes]   = useState({ votes: [], players: [] });
   const [leaveGameVotes, setLeaveGameVotes]   = useState({ votes: [], players: [] });
   const [nextRoundDeadline, setNextRoundDeadline] = useState(null); // epoch ms; null = no countdown
+  const [soundPlaying, setSoundPlaying]   = useState(false); // a Soundboard sound is playing somewhere in the room
 
   useEffect(() => {
     const clientId = clientIdRef.current;
@@ -97,6 +99,7 @@ export function useFlippingHusks() {
       setAnimQueue([]);
       setActionError(null);
       setError(null);
+      setSoundPlaying(false);
       setNextRoundDeadline(nrd ?? null);
       if (nrv) setNextRoundVotes(nrv);
       if (pav) setPlayAgainVotes(pav);
@@ -138,6 +141,22 @@ export function useFlippingHusks() {
     socket.on('fh_next_round_countdown', ({ deadline }) => setNextRoundDeadline(deadline));
     socket.on('fh_action_rejected', ({ error: e }) => setActionError(e));
     socket.on('fh_error',          ({ message })   => setError(message));
+
+    // Soundboard: the server approved a sound (someone spent SP). EVERYONE in the
+    // room — including the player who played it — gets this and plays the sound, and
+    // marks the board "busy" so only one sound plays room-wide at a time. The player
+    // who triggered it reports back when it finishes so the server can free the lock.
+    socket.on('fh_sound', ({ sound, playerId: from }) => {
+      setSoundPlaying(true);
+      const audio = playSoundUrl(sound);
+      if (from === clientId && audio) {
+        const done = () => socketRef.current?.emit('fh_sound_ended');
+        audio.addEventListener('ended', done, { once: true });
+        audio.addEventListener('error', done, { once: true });
+      }
+    });
+    // The room-wide sound finished (or its lock timed out) → board is free again.
+    socket.on('fh_sound_done', () => setSoundPlaying(false));
 
     // The whole room voted to leave: the room is gone server-side. Drop all game
     // state so the player lands back on the room-code screen, and forget the room
@@ -218,6 +237,13 @@ export function useFlippingHusks() {
     attempt();
   }, []);
 
+  // Ask the server to play a Soundboard sound for the whole room. The server checks
+  // SP + the room-wide single-sound lock, then broadcasts fh_sound back to everyone.
+  const playSound = useCallback((key) => socketRef.current?.emit('fh_play_sound', { emote: key }), []);
+
+  // Soundboard cheat: ask the server to grant SP (the hidden "+" button).
+  const cheatAddSp = useCallback(() => socketRef.current?.emit('fh_cheat_sp'), []);
+
   const advanceAnim   = useCallback(() => setAnimQueue(q => q.slice(1)), []);
   const votePlayAgain   = useCallback(() => socketRef.current?.emit('fh_play_again'), []);
   const voteNextRound   = useCallback(() => socketRef.current?.emit('fh_next_round_vote'), []);
@@ -254,6 +280,7 @@ export function useFlippingHusks() {
     nextRoundVotes, voteNextRound, nextRoundDeadline,
     leaveGameVotes, voteLeaveGame, withdrawLeaveGame,
     joinRoom, startGame, sendAction, leaveRoom,
+    playSound, soundPlaying, cheatAddSp,
   };
 }
 

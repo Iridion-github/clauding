@@ -9,6 +9,7 @@ import { CardDrawAnimation } from '../components/flippinghusks/CardDrawAnimation
 import { ReshuffleAnimation } from '../components/flippinghusks/ReshuffleAnimation';
 import { isDiscordActivity, setupDiscord, discordRoomId, discordPlayerName } from '../discord/discord';
 import { CardThemeProvider } from '../components/flippinghusks/CardThemeContext';
+import { Soundboard } from '../components/flippinghusks/Soundboard';
 import { loadSettings, musicSrcFor, BGM_VOLUME, applyAnimationSpeed, applyBackground } from '../components/flippinghusks/settingsStore';
 
 export function FlippingHusksApp() {
@@ -52,6 +53,7 @@ function FlippingHusksAppInner() {
     nextRoundVotes, voteNextRound, nextRoundDeadline,
     leaveGameVotes, voteLeaveGame, withdrawLeaveGame,
     joinRoom, startGame, sendAction, leaveRoom,
+    playSound, soundPlaying, cheatAddSp,
   } = useFlippingHusks();
 
   // When launched as a Discord Activity, do the SDK/OAuth handshake and learn the
@@ -114,14 +116,19 @@ function FlippingHusksAppInner() {
     }
   }, [gameState?.phase]);
 
-  // Toggle mute by swapping the volume between 0 and the normal level.
+  // Toggle mute — the volume effect below applies the actual level.
   function toggleBgmMute() {
+    setBgmMuted(m => !m);
+  }
+
+  // Drive the BGM volume from the mute + Soundboard state: normal when idle, halved
+  // while a Soundboard sound plays (so the clip is clearly audible), 0 when muted.
+  useEffect(() => {
     const audio = bgmRef.current;
     if (!audio) return;
-    const muted = audio.volume === 0;
-    audio.volume = muted ? BGM_VOLUME : 0;
-    setBgmMuted(!muted);
-  }
+    const base = bgmMuted ? 0 : BGM_VOLUME;
+    audio.volume = soundPlaying ? base / 2 : base;
+  }, [soundPlaying, bgmMuted, bgmPlaying]);
 
   // Stop the music if we leave the game (unmount / navigate away).
   useEffect(() => () => {
@@ -228,6 +235,12 @@ function FlippingHusksAppInner() {
             {bgmMuted ? <VolumeOffIcon /> : <VolumeUpIcon />}
           </Fab>
         )}
+        <Soundboard
+          playSound={playSound}
+          sp={gameState.players[playerId]?.sp ?? 0}
+          soundPlaying={soundPlaying}
+          onCheat={cheatAddSp}
+        />
       </>
     );
   }

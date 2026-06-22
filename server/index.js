@@ -29,6 +29,48 @@ const fh = io.of('/flippinghusks');
 // pre-empt the real, animation-aware countdown.
 const NEXT_ROUND_COUNTDOWN_MS = 30000;
 
+// Soundboard: emote keys it accepts, the SP cost to play one, and a hard cap on
+// how long the global single-sound lock can stay engaged if the player who played
+// it never reports the sound finishing (e.g. they disconnect mid-clip).
+const FH_EMOTES = new Set(['anger', 'mockery', 'jingle']);
+const SOUND_COST = 10;
+const SOUND_LOCK_MAX_MS = 12000;
+const CHEAT_SP_BONUS = 10; // SP granted each time the hidden cheat "+" button is pressed
+
+// Each emote plays a RANDOM clip from public/sounds/soundboard/<emote>/. The pick
+// happens here on the server so every player hears the exact same clip. We read the
+// folder fresh each time (clips are few and plays are infrequent) so newly-added
+// files are picked up without a restart. In production the public folder is copied
+// into build/, so we look there first, then fall back to public/ for local dev.
+function soundboardDir(emote) {
+  const candidates = [
+    path.join(__dirname, '../build/sounds/soundboard', emote),
+    path.join(__dirname, '../public/sounds/soundboard', emote),
+  ];
+  return candidates.find(d => fs.existsSync(d)) || null;
+}
+
+function randomSoundUrl(emote) {
+  const dir = soundboardDir(emote);
+  if (!dir) return null;
+  let files = [];
+  try { files = fs.readdirSync(dir).filter(f => /\.(mp3|ogg|wav|m4a)$/i.test(f)); }
+  catch { return null; }
+  if (files.length === 0) return null;
+  const file = files[Math.floor(Math.random() * files.length)];
+  return `/sounds/soundboard/${emote}/${encodeURIComponent(file)}`;
+}
+
+// Release the room's global sound lock and tell everyone the field is clear again.
+function releaseSoundLock(roomId) {
+  const room = fhRooms[roomId];
+  if (!room) return;
+  if (room.soundLockTimer) { clearTimeout(room.soundLockTimer); room.soundLockTimer = null; }
+  if (room.soundLock == null) return;
+  room.soundLock = null;
+  fh.to(roomId).emit('fh_sound_done');
+}
+
 function clearNextRoundTimer(room) {
   if (room && room.nextRoundTimer) {
     clearTimeout(room.nextRoundTimer);
@@ -82,6 +124,7 @@ function scheduleRoomCleanup(roomId) {
   if (!room || room.cleanupTimer) return;
   room.cleanupTimer = setTimeout(() => {
     clearNextRoundTimer(room);
+    if (room.soundLockTimer) clearTimeout(room.soundLockTimer);
     delete fhRooms[roomId];
     console.log('[FlippingHusks] Room cleaned up (all players offline):', roomId);
   }, ROOM_CLEANUP_MS);
@@ -94,6 +137,7 @@ function closeRoom(roomId) {
   if (!room) return;
   clearNextRoundTimer(room);
   cancelRoomCleanup(room);
+  if (room.soundLockTimer) clearTimeout(room.soundLockTimer);
   fh.to(roomId).emit('fh_room_closed'); // notify while sockets are still in the room
   for (const p of room.players) {
     if (!p.socketId) continue;
@@ -154,6 +198,7 @@ fh.on('connection', (socket) => {
         leaveGameVotes: new Set(),
         nextRoundTimer: null, nextRoundDeadline: null,
         cleanupTimer: null, lastActionIds: {},
+        soundLock: null, soundLockTimer: null,
       };
     }
 
@@ -275,6 +320,53 @@ fh.on('connection', (socket) => {
     });
 
     maybeCloseRoomOnLeave(meta.roomId);
+  });
+
+  // Soundboard: a player spends SP to play a sound that EVERYONE in the room hears.
+  // Only one sound may play across the whole room at a time (a global lock), and the
+  // player needs at least SOUND_COST SP. On success we deduct the SP, engage the lock,
+  // broadcast the sound to everyone (including the player, so they hear it too), and
+  // push the updated state so SP counters refresh.
+  socket.on('fh_play_sound', ({ emote } = {}) => {
+    const meta = fhSocketToRoom[socket.id];
+    if (!meta) return;
+    const room = fhRooms[meta.roomId];
+    if (!room?.state) return;
+    if (room.soundLock != null) return;          // a sound is already playing
+    if (!FH_EMOTES.has(emote)) return;
+    const player = room.state.players[meta.playerId];
+    if (!player || player.sp < SOUND_COST) return; // can't afford it
+
+    const sound = randomSoundUrl(emote);
+    if (!sound) return; // no clips available for this emote — don't charge or lock
+
+    player.sp -= SOUND_COST;
+    room.soundLock = meta.playerId;
+    fh.to(meta.roomId).emit('fh_sound', { sound, playerId: meta.playerId });
+    fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
+    room.soundLockTimer = setTimeout(() => releaseSoundLock(meta.roomId), SOUND_LOCK_MAX_MS);
+  });
+
+  // The player who played the current sound reports it has finished → free the lock.
+  socket.on('fh_sound_ended', () => {
+    const meta = fhSocketToRoom[socket.id];
+    if (!meta) return;
+    const room = fhRooms[meta.roomId];
+    if (room && room.soundLock === meta.playerId) releaseSoundLock(meta.roomId);
+  });
+
+  // Soundboard cheat: the client unlocked a hidden "+" button (rapid key presses)
+  // and pressed it. Just grant the SP — cheating is the whole point — but only to a
+  // real player in a running game.
+  socket.on('fh_cheat_sp', () => {
+    const meta = fhSocketToRoom[socket.id];
+    if (!meta) return;
+    const room = fhRooms[meta.roomId];
+    if (!room?.state) return;
+    const player = room.state.players[meta.playerId];
+    if (!player) return;
+    player.sp += CHEAT_SP_BONUS;
+    fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
   });
 
   // Leave the PRE-GAME lobby (the lobby "Back" button). Mirrors the disconnect

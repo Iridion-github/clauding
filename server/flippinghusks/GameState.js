@@ -1,5 +1,12 @@
 const { buildDeck, shuffle } = require('./Cards');
 
+// Soundboard economy: players start each game with SP_START Sound Points, earn
+// SP_PER_DRAW every time they draw a card (the opening deal doesn't count), and get
+// SP_ON_TARGETED whenever they're hit by a Freeze or Flip Three.
+const SP_START = 10;
+const SP_PER_DRAW = 5;
+const SP_ON_TARGETED = 10;
+
 function createPlayer(id, name) {
   return {
     id, name,
@@ -8,6 +15,7 @@ function createPlayer(id, name) {
     secondChances: 0,
     totalScore: 0,
     roundScore: null,
+    sp: SP_START,
   };
 }
 
@@ -49,7 +57,7 @@ function dealOneInitial(state) {
   if (state.players[playerId].cards.length > 0) return;
   if (state.drawPile.length === 0) replenish(state);
   const card = state.drawPile.shift();
-  applyCard(state, playerId, card, {});
+  applyCard(state, playerId, card, { initial: true });
 }
 
 function continueDeal(state) {
@@ -72,6 +80,10 @@ function drawAndProcess(state, playerId) {
 function applyCard(state, playerId, card, opts = {}) {
   const player = state.players[playerId];
   const auto   = opts.auto === true;
+
+  // Drawing a card earns Sound Points (the automatic opening deal is excluded so
+  // everyone verifiably starts a game with exactly SP_START).
+  if (!opts.initial) player.sp += SP_PER_DRAW;
 
   switch (card.type) {
 
@@ -169,6 +181,7 @@ function resolveFreeze(state, drawerId, targetId) {
   const target = state.players[targetId];
   if (!target || target.status !== 'active') return false;
 
+  target.sp += SP_ON_TARGETED; // being targeted by Freeze grants SP
   target.cards.push(pa.card);
   target.status = 'stayed';
 
@@ -186,6 +199,7 @@ function resolveFlipThree(state, drawerId, targetId) {
   const target = state.players[targetId];
   if (!target || target.status !== 'active') return false;
 
+  target.sp += SP_ON_TARGETED; // being targeted by Flip Three grants SP
   state.pendingAction = null;
 
   const who = drawerId === targetId ? 'themselves' : target.name;
@@ -297,6 +311,7 @@ function resetGame(state) {
     p.secondChances = 0;
     p.roundScore    = null;
     p.totalScore    = 0;
+    p.sp            = SP_START;
   }
 
   state.dealQueue = [...state.playerOrder];

@@ -10,8 +10,6 @@ export const EMOTES = [
   { key: 'jingle',  label: 'Jingle',  icon: '🎵', color: '#1976d2' }, // Blue — musical note
 ];
 
-export const EMOTE_KEYS = EMOTES.map(e => e.key);
-
 // SP it costs to play one sound (must match SOUND_COST on the server).
 export const SOUND_COST = 10;
 

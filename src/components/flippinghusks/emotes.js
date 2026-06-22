@@ -20,7 +20,7 @@ export const SOUND_COST = 10;
 // toward a ceiling) and a master GainNode applies makeup gain — together they bring
 // quiet and loud clips much closer in perceived volume. The master gain is also the
 // single place to set the overall Soundboard volume.
-export const SOUNDBOARD_VOLUME = 1.4; // master makeup gain (the one volume knob)
+export const SOUNDBOARD_VOLUME = 0.93; // master makeup gain (the one volume knob)
 
 // Hard cap on how long any clip may play — longer clips are cut off at this mark.
 export const SOUNDBOARD_MAX_MS = 8000;
@@ -36,11 +36,11 @@ function audioGraph() {
   if (!audioCtx) {
     audioCtx = new Ctx();
     const comp = audioCtx.createDynamicsCompressor();
-    comp.threshold.value = -20; // start leveling well below 0 dBFS
-    comp.knee.value = 24;
-    comp.ratio.value = 12;      // strong ratio → limiter-like ceiling for loud clips
+    comp.threshold.value = -30; // catch more of the signal so loud clips are tamed earlier
+    comp.knee.value = 18;       // tighter knee → firmer onset of compression
+    comp.ratio.value = 20;      // near-limiting → strong clips are softened hard
     comp.attack.value = 0.003;
-    comp.release.value = 0.25;
+    comp.release.value = 0.2;
     const master = audioCtx.createGain();
     master.gain.value = SOUNDBOARD_VOLUME;
     comp.connect(master).connect(audioCtx.destination);

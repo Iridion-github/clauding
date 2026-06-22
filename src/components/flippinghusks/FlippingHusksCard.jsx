@@ -21,6 +21,13 @@ const CF_ACTION_IMG = {
   flip_three: 'FlipThreeTextless.png',
   second_chance: 'SecondChanceTextless.png',
 };
+// In-world names overlaid on the (textless) action-card artwork. Each entry is the
+// list of lines to stack, rendered in the same gothic blackletter face as the numbers.
+const CF_ACTION_TEXT = {
+  freeze: ['Ice Storm'],
+  flip_three: ['Jilka'],
+  second_chance: ['Silver Flame', 'Shield'],
+};
 
 function cfImageFor(card) {
   if (card.type === 'number') return CF_NUMBER_IMG[card.value] ?? null;
@@ -54,11 +61,27 @@ export function FlippingHusksCard({ card, faceDown = false, small = false, highl
 
 function ClassicFantasyCard({ card, img, small, highlight }) {
   const src = `${process.env.PUBLIC_URL}/images/ClassicFantasy/cards/${img}`;
+  // The artwork is textless. Number cards (0–12) get their value engraved in a sharp
+  // gothic blackletter (UnifrakturMaguntia) face in opposite corners; the action cards
+  // get their in-world name as a title in that same face.
+  const num = card.type === 'number' ? String(card.value) : null;
+  const titleLines = CF_ACTION_TEXT[card.type] ?? null;
   // An <img> (rather than a CSS background) lets the browser apply its
   // highest-quality scaler — far smoother when the artwork is shrunk to card size.
   return (
     <div className={`fhcard fhcard-cf${small ? ' fhcard-small' : ''}${highlight ? ' fhcard-highlight' : ''}`}>
       <img className="fhcard-cf-img" src={src} alt={card.label ?? card.type} draggable={false} />
+      {num !== null && (
+        <>
+          <span className="fhcf-num fhcf-num-tl" aria-hidden="true">{num}</span>
+          <span className="fhcf-num fhcf-num-br" aria-hidden="true">{num}</span>
+        </>
+      )}
+      {titleLines && (
+        <div className="fhcf-title" aria-hidden="true">
+          {titleLines.map((line, i) => <div key={i}>{line}</div>)}
+        </div>
+      )}
     </div>
   );
 }

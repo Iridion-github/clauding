@@ -232,7 +232,7 @@ fh.on('connection', (socket) => {
     fh.to(roomId).emit('fh_room_update', { players: roster(room), hostId: room.hostId });
   });
 
-  socket.on('fh_start', ({ roomId }) => {
+  socket.on('fh_start', ({ roomId, soundboardEnabled }) => {
     const room = fhRooms[roomId];
     if (!room) { socket.emit('fh_error', { message: 'Room not found.' }); return; }
     const meta = fhSocketToRoom[socket.id];
@@ -241,7 +241,10 @@ fh.on('connection', (socket) => {
 
     room.lastActionIds = {};
     room.leaveGameVotes.clear();
-    room.state = createFlippingHusksGame(room.players.map(p => ({ id: p.id, name: p.name })));
+    room.state = createFlippingHusksGame(
+      room.players.map(p => ({ id: p.id, name: p.name })),
+      { soundboardEnabled: !!soundboardEnabled }, // host's lobby choice
+    );
     fh.to(roomId).emit('fh_game_started', { state: fhClientState(room.state) });
   });
 
@@ -350,6 +353,7 @@ fh.on('connection', (socket) => {
     if (!meta) return;
     const room = fhRooms[meta.roomId];
     if (!room?.state) return;
+    if (!room.state.soundboardEnabled) return;   // host disabled the Soundboard this game
     if (room.soundLock != null) return;          // a sound is already playing
     if (!FH_EMOTES.has(emote)) return;
     const player = room.state.players[meta.playerId];
@@ -399,29 +403,46 @@ fh.on('connection', (socket) => {
     fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
   });
 
-  // Leave the PRE-GAME lobby (the lobby "Back" button). Mirrors the disconnect
-  // cleanup, but the socket stays connected so the player can rejoin. No-ops once a
-  // game is running — in-game leaving goes through the unanimous fh_leave_vote path.
+  // Leave the room from the lobby ("Back") OR from a FINISHED game's end screen
+  // ("Leave"). Leaving an IN-PROGRESS game (playing / round_end) still goes through
+  // the unanimous fh_leave_vote path, so we only act here for the lobby or a finished
+  // game. Crucially, a finished game must be torn down on leave — otherwise its stale
+  // state (including the host's old Soundboard choice) lingers and gets resynced on
+  // re-join, so the next lobby start never takes effect.
   socket.on('fh_leave_room', () => {
     const meta = fhSocketToRoom[socket.id];
     if (!meta) return;
     const room = fhRooms[meta.roomId];
-    if (!room || room.state) return;
+    if (!room) return;
+    if (room.state && room.state.phase !== 'finished') return; // in-progress → use the vote
 
+    const wasHost = room.hostId === meta.playerId;
     room.players = room.players.filter(p => p.id !== meta.playerId);
     room.playAgainVotes.delete(meta.playerId);
     room.nextRoundVotes.delete(meta.playerId);
     room.leaveGameVotes?.delete(meta.playerId);
+
+    // Finished game: also drop the leaver from the game state so a remaining player's
+    // "Play Again" stays consistent.
+    if (room.state) {
+      delete room.state.players[meta.playerId];
+      room.state.playerOrder = room.state.playerOrder.filter(id => id !== meta.playerId);
+    }
+
     delete fhSocketToRoom[socket.id];
     socket.leave(meta.roomId);
 
     if (room.players.length === 0) {
+      // Last one out → drop the whole room (and its finished state) so the next join
+      // builds a brand-new room and lobby.
       clearNextRoundTimer(room);
       cancelRoomCleanup(room);
+      if (room.soundLockTimer) clearTimeout(room.soundLockTimer);
       delete fhRooms[meta.roomId];
     } else {
-      if (room.hostId === meta.playerId) room.hostId = room.players[0].id;
+      if (wasHost) room.hostId = room.players[0].id;
       fh.to(meta.roomId).emit('fh_room_update', { players: roster(room), hostId: room.hostId });
+      if (room.state) fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
     }
   });
 

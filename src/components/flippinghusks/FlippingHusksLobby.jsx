@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import {
   Box, Button, TextField, Typography, Stack,
   List, ListItem, ListItemText, Chip, Alert, IconButton,
+  Switch, FormControlLabel,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import StarIcon from '@mui/icons-material/Star';
 import SchoolIcon from '@mui/icons-material/School';
 import SettingsIcon from '@mui/icons-material/Settings';
+import CampaignIcon from '@mui/icons-material/Campaign';
 import { LearnToPlay } from './LearnToPlay';
 import { Settings } from './Settings';
 import { isDiscordActivity } from '../../discord/discord';
@@ -43,6 +45,16 @@ export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPl
   const [name, setName] = useState(() => discord?.name ?? localStorage.getItem('fh_playerName') ?? '');
   const [showTutorial, setShowTutorial] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  // Host-only choice, applied when the game starts: enables the in-game Soundboard
+  // for everyone (on) or hides it entirely (off). Defaults on, and the last choice is
+  // remembered so it survives leaving back to the lobby / reloads.
+  const [soundboardEnabled, setSoundboardEnabled] = useState(
+    () => localStorage.getItem('fh_soundboard') !== 'off'
+  );
+  function changeSoundboard(on) {
+    setSoundboardEnabled(on);
+    localStorage.setItem('fh_soundboard', on ? 'on' : 'off');
+  }
   const inRoom = roomPlayers.length > 0;
 
   function handleJoin(e) {
@@ -144,9 +156,32 @@ export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPl
             {error && <Alert severity="error">{error}</Alert>}
 
             {isHost ? (
-              <Button size="large" fullWidth onClick={onStart} sx={CARD_BTN_SX}>
-                {roomPlayers.length < 2 ? 'Start (Debug Mode)' : `Start Game (${roomPlayers.length} players)`}
-              </Button>
+              <>
+                {/* Host picks whether the in-game Soundboard is available this game.
+                    Green when on, grey when off. */}
+                <Box sx={{ background: 'rgba(255,255,255,0.04)', borderRadius: 2, px: 2, py: 1 }}>
+                  <FormControlLabel
+                    sx={{ m: 0, width: '100%', justifyContent: 'space-between' }}
+                    labelPlacement="start"
+                    control={
+                      <Switch
+                        color="success"
+                        checked={soundboardEnabled}
+                        onChange={e => changeSoundboard(e.target.checked)}
+                      />
+                    }
+                    label={
+                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                        <CampaignIcon fontSize="small" color={soundboardEnabled ? 'success' : 'disabled'} />
+                        <Typography>Soundboard</Typography>
+                      </Stack>
+                    }
+                  />
+                </Box>
+                <Button size="large" fullWidth onClick={() => onStart(soundboardEnabled)} sx={CARD_BTN_SX}>
+                  {roomPlayers.length < 2 ? 'Start (Debug Mode)' : `Start Game (${roomPlayers.length} players)`}
+                </Button>
+              </>
             ) : (
               <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', fontStyle: 'italic' }}>
                 Waiting for host to start…

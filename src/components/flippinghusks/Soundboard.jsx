@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Box, Button, Fab, Slide, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Fab, Slide, Typography } from '@mui/material';
 import StopIcon from '@mui/icons-material/Stop';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import AddIcon from '@mui/icons-material/Add';
@@ -131,22 +131,20 @@ export function Soundboard({ playSound, stopSound, canStop = false, sp = 0, soun
           >
             {/* SP counter — only ever visible while this panel is open. */}
             <Typography
-              variant="caption"
+              variant="h5"
               sx={{
-                fontWeight: 'bold', letterSpacing: 0.5, whiteSpace: 'nowrap',
-                color: canAfford ? '#ffe08a' : '#ff8a8a',
+                fontWeight: 300, letterSpacing: 0.5, whiteSpace: 'nowrap',
+                color: canAfford ? '#fff' : '#ff8a8a',
                 textShadow: '0 1px 4px rgba(0,0,0,0.85)',
               }}
             >
-              {sp} SP · {SOUND_COST} each
+              {sp}
             </Typography>
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               {EMOTES.map(({ key, label, icon, color }) => (
-                <Tooltip key={key} title={label} placement="top">
-                  {/* span wrapper so the Tooltip still works while the Fab is disabled */}
-                  <span>
                     <Fab
+                      key={key}
                       size="medium"
                       aria-label={label}
                       disabled={locked}
@@ -189,13 +187,10 @@ export function Soundboard({ playSound, stopSound, canStop = false, sp = 0, soun
                     >
                       <span aria-hidden="true">{icon}</span>
                     </Fab>
-                  </span>
-                </Tooltip>
               ))}
 
               {/* Hidden cheat button: appears only once unlocked; grants free SP. */}
               {cheatUnlocked && (
-                <Tooltip title="+10 SP" placement="top">
                   <Fab
                     size="medium"
                     aria-label="Cheat: gain 10 SP"
@@ -227,7 +222,6 @@ export function Soundboard({ playSound, stopSound, canStop = false, sp = 0, soun
                   >
                     <AddIcon />
                   </Fab>
-                </Tooltip>
               )}
             </Box>
 

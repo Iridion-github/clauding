@@ -235,14 +235,16 @@ function FlippingHusksAppInner() {
             {bgmMuted ? <VolumeOffIcon /> : <VolumeUpIcon />}
           </Fab>
         )}
-        <Soundboard
-          playSound={playSound}
-          stopSound={stopSound}
-          canStop={soundPlaying && iStartedSound}
-          sp={gameState.players[playerId]?.sp ?? 0}
-          soundPlaying={soundPlaying}
-          onCheat={cheatAddSp}
-        />
+        {gameState.soundboardEnabled && (
+          <Soundboard
+            playSound={playSound}
+            stopSound={stopSound}
+            canStop={soundPlaying && iStartedSound}
+            sp={gameState.players[playerId]?.sp ?? 0}
+            soundPlaying={soundPlaying}
+            onCheat={cheatAddSp}
+          />
+        )}
       </>
     );
   }
@@ -291,7 +293,7 @@ function FlippingHusksAppInner() {
       error={error}
       discord={discordInfo}
       onJoin={handleJoin}
-      onStart={() => startGame(currentRoomId)}
+      onStart={(soundboardEnabled) => startGame(currentRoomId, soundboardEnabled)}
       onLeaveRoom={leaveRoom}
     />
   );

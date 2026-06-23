@@ -200,7 +200,8 @@ export function useFlippingHusks() {
     socketRef.current?.emit('fh_join', { roomId, playerName: name, playerId: clientIdRef.current });
   }, []);
 
-  const startGame = useCallback((roomId) => socketRef.current?.emit('fh_start', { roomId }), []);
+  const startGame = useCallback((roomId, soundboardEnabled) =>
+    socketRef.current?.emit('fh_start', { roomId, soundboardEnabled }), []);
 
   // Send an action reliably. We wait for a server acknowledgement; if none arrives
   // (lost packet / temporary disconnect) we retry every ~2.5s until it lands. Each

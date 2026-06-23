@@ -19,7 +19,7 @@ function createPlayer(id, name) {
   };
 }
 
-function createGame(players) {
+function createGame(players, { soundboardEnabled = false } = {}) {
   const deck = buildDeck();
   shuffle(deck);
 
@@ -37,6 +37,9 @@ function createGame(players) {
     pendingAction: null, // { type:'freeze'|'flip_three', drawerId, card }
     dealQueue: [],       // players still waiting for their initial card
     winner: null,
+    // Whether the in-game Soundboard is available this game — chosen by the host via a
+    // lobby switch at start. Persists across rounds / play-again (resetGame keeps it).
+    soundboardEnabled: !!soundboardEnabled,
     log: [],
   };
 

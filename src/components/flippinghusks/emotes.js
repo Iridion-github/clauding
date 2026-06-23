@@ -8,6 +8,7 @@ export const EMOTES = [
   { key: 'anger',   label: 'Anger',   icon: '💢', color: '#d32f2f' }, // Red — temple pulsing vein
   { key: 'mockery', label: 'Mockery', icon: '😛', color: '#f5c518' }, // Yellow — Bronx cheer
   { key: 'jingle',  label: 'Jingle',  icon: '🎵', color: '#1976d2' }, // Blue — musical note
+  { key: 'success', label: 'Success', icon: '🎉', color: '#2e7d32' }, // Green — party popper
 ];
 
 // SP it costs to play one sound (must match SOUND_COST on the server).

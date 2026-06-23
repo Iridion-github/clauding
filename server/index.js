@@ -32,7 +32,7 @@ const NEXT_ROUND_COUNTDOWN_MS = 30000;
 // Soundboard: emote keys it accepts, the SP cost to play one, and a hard cap on
 // how long the global single-sound lock can stay engaged if the player who played
 // it never reports the sound finishing (e.g. they disconnect mid-clip).
-const FH_EMOTES = new Set(['anger', 'mockery', 'jingle']);
+const FH_EMOTES = new Set(['anger', 'mockery', 'jingle', 'success']);
 const SOUND_COST = 10;
 const SOUND_LOCK_MAX_MS = 9000; // safety release if the player never reports 'ended' (clips are capped at 8s client-side)
 const CHEAT_SP_BONUS = 10; // SP granted each time the hidden cheat "+" button is pressed

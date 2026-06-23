@@ -30,6 +30,10 @@ function createGame(players, { soundboardEnabled = false } = {}) {
     phase: 'playing',
     round: 1,
     playerOrder: players.map(p => p.id),
+    // Stable seating order, fixed for the whole game. playerOrder rotates each round
+    // (turn order), but seats never changes — the board lays players out by seats so a
+    // player always appears in the same place. Persists across rounds / play-again.
+    seats: players.map(p => p.id),
     players: playerMap,
     drawPile: deck,
     discardPile: [],     // persists across rounds; reshuffled into drawPile when deck runs out

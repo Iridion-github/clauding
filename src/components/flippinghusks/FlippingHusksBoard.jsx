@@ -28,7 +28,10 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
   const { players, playerOrder, activePlayerId, phase, round, drawPile, discardCount, log, winner, pendingAction } = gameState;
   const offlineIds = new Set(roomPlayers.filter(p => p.connected === false).map(p => p.id));
   const self = players[playerId];
-  const opponents = playerOrder.filter(pid => pid !== playerId);
+  // Lay opponents out by the STABLE seating order (falls back to playerOrder for any
+  // pre-existing game without seats) so a player never changes position between rounds.
+  const seats = gameState.seats ?? playerOrder;
+  const opponents = seats.filter(pid => pid !== playerId);
   const myPendingIsOpen = pendingAction != null && pendingAction.drawerId === playerId;
   const otherPending    = pendingAction != null && pendingAction.drawerId !== playerId;
   const hasVotedPlayAgain  = playAgainVotes.votes.includes(playerId);
@@ -297,7 +300,6 @@ function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePla
         >
           <span className="fhaction-btn-icon">←</span>
           <span className="fhaction-btn-main">Leave</span>
-          <span className="fhaction-btn-sub">Back to start screen</span>
         </button>
         <button
           className="fhaction-btn fhaction-btn-hit"
@@ -306,11 +308,11 @@ function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePla
         >
           <span className="fhaction-btn-icon">↺</span>
           <span className="fhaction-btn-main">{hasVotedPlayAgain ? 'Waiting…' : 'Play Again'}</span>
-          <span className="fhaction-btn-sub">
-            {hasVotedPlayAgain
-              ? `${playAgainVoteCount}/${playerOrder.length} ready`
-              : 'Start a new game'}
-          </span>
+          {hasVotedPlayAgain && (
+            <span className="fhaction-btn-sub">
+              {`${playAgainVoteCount}/${playerOrder.length} ready`}
+            </span>
+          )}
         </button>
       </div>
     );

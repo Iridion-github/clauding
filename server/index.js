@@ -220,6 +220,28 @@ fh.on('connection', (socket) => {
       };
     }
 
+    // Abandoned-game recovery: a game is only truly "in progress" if at least one
+    // player is still connected. If the room has state but EVERY player is offline, the
+    // game was abandoned — e.g. the last player closed the Discord activity without
+    // pressing Leave (which never sends a reliable message; the server only sees the
+    // socket drop). Rather than lock new arrivals out forever with "Game already
+    // started", recycle the room into a fresh lobby for this joiner.
+    if (room.state && connectedCount(room) === 0) {
+      cancelRoomCleanup(room);
+      clearNextRoundTimer(room);
+      if (room.soundLockTimer) { clearTimeout(room.soundLockTimer); room.soundLockTimer = null; }
+      room.state = null;
+      room.players = [];
+      room.hostId = stableId;
+      room.playAgainVotes.clear();
+      room.nextRoundVotes.clear();
+      room.leaveGameVotes.clear();
+      room.lastActionIds = {};
+      room.nextRoundDeadline = null;
+      room.soundLock = null;
+      console.log('[FlippingHusks] Abandoned game recycled into a fresh lobby:', roomId);
+    }
+
     if (room.state) { socket.emit('fh_error', { message: 'Game already started.' }); return; }
     if (room.players.length >= 6) { socket.emit('fh_error', { message: 'Room is full (max 6).' }); return; }
 
@@ -423,10 +445,11 @@ fh.on('connection', (socket) => {
     room.leaveGameVotes?.delete(meta.playerId);
 
     // Finished game: also drop the leaver from the game state so a remaining player's
-    // "Play Again" stays consistent.
+    // "Play Again" stays consistent (including the stable seating order).
     if (room.state) {
       delete room.state.players[meta.playerId];
       room.state.playerOrder = room.state.playerOrder.filter(id => id !== meta.playerId);
+      if (room.state.seats) room.state.seats = room.state.seats.filter(id => id !== meta.playerId);
     }
 
     delete fhSocketToRoom[socket.id];

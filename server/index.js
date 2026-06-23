@@ -50,6 +50,12 @@ function soundboardDir(emote) {
   return candidates.find(d => fs.existsSync(d)) || null;
 }
 
+// Per-category memory of the most recently played clips. On each pick we remove the
+// last RECENT_SOUND_MEMORY files for that emote from the candidate pool so the same
+// sound isn't repeated too soon (and never repeats back-to-back).
+const RECENT_SOUND_MEMORY = 3;
+const recentSounds = new Map(); // emote -> [filenames, most-recent first]
+
 function randomSoundUrl(emote) {
   const dir = soundboardDir(emote);
   if (!dir) return null;
@@ -57,7 +63,19 @@ function randomSoundUrl(emote) {
   try { files = fs.readdirSync(dir).filter(f => /\.(mp3|ogg|wav|m4a)$/i.test(f)); }
   catch { return null; }
   if (files.length === 0) return null;
-  const file = files[Math.floor(Math.random() * files.length)];
+
+  // Drop the recently-played clips from the pool. If that empties it (the folder has
+  // RECENT_SOUND_MEMORY or fewer files), fall back to the full list so a pick is
+  // always possible.
+  const recent = recentSounds.get(emote) || [];
+  let pool = files.filter(f => !recent.includes(f));
+  if (pool.length === 0) pool = files;
+
+  const file = pool[Math.floor(Math.random() * pool.length)];
+
+  // Record this pick as most-recent, keeping only the last RECENT_SOUND_MEMORY.
+  recentSounds.set(emote, [file, ...recent.filter(f => f !== file)].slice(0, RECENT_SOUND_MEMORY));
+
   return `/sounds/soundboard/${emote}/${encodeURIComponent(file)}`;
 }
 
@@ -353,6 +371,18 @@ fh.on('connection', (socket) => {
     if (!meta) return;
     const room = fhRooms[meta.roomId];
     if (room && room.soundLock === meta.playerId) releaseSoundLock(meta.roomId);
+  });
+
+  // The STOP button: only the player who STARTED the current sound may cut it short.
+  // Tell everyone to halt their local audio, then free the room lock.
+  socket.on('fh_stop_sound', () => {
+    const meta = fhSocketToRoom[socket.id];
+    if (!meta) return;
+    const room = fhRooms[meta.roomId];
+    if (!room || room.soundLock == null) return;        // nothing is playing
+    if (room.soundLock !== meta.playerId) return;       // only the initiator can stop it
+    fh.to(meta.roomId).emit('fh_sound_stop');
+    releaseSoundLock(meta.roomId);
   });
 
   // Soundboard cheat: the client unlocked a hidden "+" button (rapid key presses)

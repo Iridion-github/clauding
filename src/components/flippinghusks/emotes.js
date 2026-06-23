@@ -49,33 +49,86 @@ function audioGraph() {
   return audioCtx;
 }
 
-// Play a clip from its (server-chosen) URL through the leveling graph. Returns the
-// Audio element so the player who triggered it can listen for 'ended' (to release the
-// room's single-sound lock); returns null when there's no URL.
-export function playSoundUrl(url) {
-  if (!url) return null;
-  const audio = new Audio(url);
+// ── Single reusable player ──────────────────────────────────────────────────────
+// All clips play through ONE persistent <audio> element wired into the leveling graph
+// via ONE MediaElementAudioSourceNode. This is deliberate: a MediaElementSourceNode
+// can be created only once per element, and creating/disconnecting a fresh node for
+// every clip (especially stopping a long clip mid-play and immediately starting
+// another) makes Chrome's Web Audio drop playback — the new clip just stays silent.
+// Reusing one element + node sidesteps all of that: switching clips is only a pause +
+// new src, with no graph surgery.
+let player = null;     // the shared HTMLAudioElement
+let playerCap = null;  // the current clip's max-duration timer
+let playerGen = 0;     // bumped on every play/stop; guards stale 'ended'/cap callbacks
+let onClipEnded = null; // callback for the CURRENT clip (e.g. release the room lock)
+
+function ensurePlayer() {
+  if (player) return player;
+  player = new Audio();
   const ctx = audioGraph();
   if (ctx) {
-    // Browsers start the context suspended; resume it (allowed once the user has
-    // interacted with the page, which they have by the time a game is running).
-    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
     try {
-      // Routing the element into the graph captures its output, so the compressor +
-      // master gain — not the raw file level — determine how loud it actually plays.
-      ctx.createMediaElementSource(audio).connect(entryNode);
+      // Route the element through the compressor + master gain so the file's raw
+      // level doesn't determine loudness. Done once, for the element's whole life.
+      ctx.createMediaElementSource(player).connect(entryNode);
     } catch {
-      // If routing fails the element still plays on its own (just unleveled).
+      // Routing failed → the element still plays on its own (just unleveled).
     }
   }
-  // Force-stop at the max duration so no clip can run longer than the cap. We fire a
-  // synthetic 'ended' so listeners (e.g. the room's single-sound lock, which waits
-  // for 'ended') still release. A natural finish clears the timer first.
-  const cap = setTimeout(() => {
-    audio.pause();
-    audio.dispatchEvent(new Event('ended'));
+  // Natural finish: fire the current clip's end callback (guarded by generation so a
+  // late event from a clip we already replaced/stopped can't fire the wrong one).
+  player.addEventListener('ended', () => finishClip(playerGen));
+  return player;
+}
+
+// End the current clip exactly once: clear its cap timer and invoke (then forget) its
+// end callback — but only if `gen` still matches the clip in flight.
+function finishClip(gen) {
+  if (gen !== playerGen) return;
+  if (playerCap) { clearTimeout(playerCap); playerCap = null; }
+  const cb = onClipEnded;
+  onClipEnded = null;
+  if (cb) cb();
+}
+
+// Play a clip from its (server-chosen) URL through the leveling graph. `onEnded` (if
+// given) fires when the clip finishes naturally or hits the duration cap — the room's
+// initiator uses it to release the single-sound lock. Any clip already playing is
+// replaced silently.
+export function playSoundUrl(url, onEnded) {
+  if (!url) return;
+  const audio = ensurePlayer();
+  const ctx = audioGraph();
+  const gen = ++playerGen; // invalidate any pending events from the previous clip
+  if (playerCap) { clearTimeout(playerCap); playerCap = null; }
+  onClipEnded = onEnded || null;
+
+  try { audio.pause(); } catch {}
+  audio.src = url;
+  try { audio.currentTime = 0; } catch {}
+
+  // Force-stop at the max duration so no clip can run longer than the cap, then end
+  // the clip (which releases the lock just like a natural finish).
+  playerCap = setTimeout(() => {
+    try { audio.pause(); } catch {}
+    finishClip(gen);
   }, SOUNDBOARD_MAX_MS);
-  audio.addEventListener('ended', () => clearTimeout(cap), { once: true });
-  audio.play().catch(() => {});
-  return audio;
+
+  // The element plays ONLY through the graph once routed, so a suspended context =
+  // silence. Browsers auto-suspend the context when the tab is backgrounded or idle,
+  // so resume it and only THEN start — otherwise short clips finish before the async
+  // resume lands and nothing is heard.
+  const start = () => { audio.play().catch(() => {}); };
+  if (ctx && ctx.state === 'suspended') ctx.resume().then(start, start);
+  else start();
+}
+
+// Stop the current clip immediately WITHOUT firing its end callback (the caller — the
+// STOP button / lock release — manages the room lock itself). Bumping the generation
+// also neutralizes the clip's pending cap timer and 'ended' event.
+export function stopSoundAudio() {
+  playerGen++;
+  onClipEnded = null;
+  if (playerCap) { clearTimeout(playerCap); playerCap = null; }
+  if (player) { try { player.pause(); player.currentTime = 0; } catch {} }
 }

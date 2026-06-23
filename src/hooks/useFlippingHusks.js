@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
-import { playSoundUrl } from '../components/flippinghusks/emotes';
+import { playSoundUrl, stopSoundAudio } from '../components/flippinghusks/emotes';
 
 const SERVER_URL = process.env.NODE_ENV === 'production'
   ? `${window.location.origin}/flippinghusks`
@@ -51,6 +51,7 @@ export function useFlippingHusks() {
   const [leaveGameVotes, setLeaveGameVotes]   = useState({ votes: [], players: [] });
   const [nextRoundDeadline, setNextRoundDeadline] = useState(null); // epoch ms; null = no countdown
   const [soundPlaying, setSoundPlaying]   = useState(false); // a Soundboard sound is playing somewhere in the room
+  const [iStartedSound, setIStartedSound] = useState(false); // the current sound was triggered by THIS player (only they can STOP it)
 
   useEffect(() => {
     const clientId = clientIdRef.current;
@@ -100,6 +101,7 @@ export function useFlippingHusks() {
       setActionError(null);
       setError(null);
       setSoundPlaying(false);
+      setIStartedSound(false);
       setNextRoundDeadline(nrd ?? null);
       if (nrv) setNextRoundVotes(nrv);
       if (pav) setPlayAgainVotes(pav);
@@ -148,15 +150,23 @@ export function useFlippingHusks() {
     // who triggered it reports back when it finishes so the server can free the lock.
     socket.on('fh_sound', ({ sound, playerId: from }) => {
       setSoundPlaying(true);
-      const audio = playSoundUrl(sound);
-      if (from === clientId && audio) {
-        const done = () => socketRef.current?.emit('fh_sound_ended');
-        audio.addEventListener('ended', done, { once: true });
-        audio.addEventListener('error', done, { once: true });
-      }
+      setIStartedSound(from === clientId); // only the initiator may STOP it
+      // The shared player auto-replaces any clip already playing. Only the initiator
+      // reports the finish back so the server can free the room's single-sound lock.
+      playSoundUrl(sound, from === clientId ? () => socketRef.current?.emit('fh_sound_ended') : null);
+    });
+    // The initiator pressed STOP → instantly halt the local clip for everyone in the room.
+    socket.on('fh_sound_stop', () => {
+      stopSoundAudio();
+      setSoundPlaying(false);
+      setIStartedSound(false);
     });
     // The room-wide sound finished (or its lock timed out) → board is free again.
-    socket.on('fh_sound_done', () => setSoundPlaying(false));
+    socket.on('fh_sound_done', () => {
+      stopSoundAudio();
+      setSoundPlaying(false);
+      setIStartedSound(false);
+    });
 
     // The whole room voted to leave: the room is gone server-side. Drop all game
     // state so the player lands back on the room-code screen, and forget the room
@@ -241,6 +251,15 @@ export function useFlippingHusks() {
   // SP + the room-wide single-sound lock, then broadcasts fh_sound back to everyone.
   const playSound = useCallback((key) => socketRef.current?.emit('fh_play_sound', { emote: key }), []);
 
+  // STOP (initiator only): halt our own clip immediately for instant feedback, then
+  // tell the server to free the room lock and cut the clip on everyone else's client.
+  const stopSound = useCallback(() => {
+    stopSoundAudio();
+    setSoundPlaying(false);
+    setIStartedSound(false);
+    socketRef.current?.emit('fh_stop_sound');
+  }, []);
+
   // Soundboard cheat: ask the server to grant SP (the hidden "+" button).
   const cheatAddSp = useCallback(() => socketRef.current?.emit('fh_cheat_sp'), []);
 
@@ -280,7 +299,7 @@ export function useFlippingHusks() {
     nextRoundVotes, voteNextRound, nextRoundDeadline,
     leaveGameVotes, voteLeaveGame, withdrawLeaveGame,
     joinRoom, startGame, sendAction, leaveRoom,
-    playSound, soundPlaying, cheatAddSp,
+    playSound, stopSound, soundPlaying, iStartedSound, cheatAddSp,
   };
 }
 

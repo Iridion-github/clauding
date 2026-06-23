@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Box, Fab, Slide, Tooltip, Typography } from '@mui/material';
-import EmojiEmotionsIcon from '@mui/icons-material/EmojiEmotions';
+import { Box, Button, Fab, Slide, Tooltip, Typography } from '@mui/material';
+import StopIcon from '@mui/icons-material/Stop';
+import CampaignIcon from '@mui/icons-material/Campaign';
 import AddIcon from '@mui/icons-material/Add';
 import { EMOTES, SOUND_COST } from './emotes';
 
@@ -15,7 +16,7 @@ const CHEAT_WINDOW_MS = 3000;
 // only one sound can play room-wide at a time (the server enforces both). The SP
 // counter is only shown here, so it's only visible while the panel is open. The
 // panel uses the same themed backdrop as the playing field (the `fh-bg` class).
-export function Soundboard({ playSound, sp = 0, soundPlaying = false, onCheat }) {
+export function Soundboard({ playSound, stopSound, canStop = false, sp = 0, soundPlaying = false, onCheat }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false); // optimistic local lock between click and approval
   const [cheatUnlocked, setCheatUnlocked] = useState(false);
@@ -63,12 +64,28 @@ export function Soundboard({ playSound, sp = 0, soundPlaying = false, onCheat })
     <>
       <Fab
         size="small"
-        color="primary"
         onClick={() => setOpen(o => !o)}
         aria-label={open ? 'Close soundboard' : 'Open soundboard'}
-        sx={{ position: 'fixed', left: 16, top: '50%', transform: 'translateY(-50%)', zIndex: 1300 }}
+        sx={{
+          position: 'fixed', left: 16, top: '50%', transform: 'translateY(-50%)', zIndex: 1300,
+          color: '#2a2d33',
+          // Brushed-metal look: a vertical light→dark steel gradient for the body,
+          // a bright top edge + dark bottom edge (bevel), and a soft inner sheen.
+          background: 'linear-gradient(145deg, #fafbfc 0%, #c3c8d0 38%, #8b929c 62%, #5b616b 100%)',
+          border: '1px solid rgba(255,255,255,0.55)',
+          boxShadow:
+            'inset 0 1px 1px rgba(255,255,255,0.9), inset 0 -2px 3px rgba(0,0,0,0.35), 0 4px 10px rgba(0,0,0,0.5)',
+          '&:hover': {
+            background: 'linear-gradient(145deg, #ffffff 0%, #ced3db 38%, #969da7 62%, #656b75 100%)',
+            boxShadow:
+              'inset 0 1px 1px rgba(255,255,255,0.95), inset 0 -2px 3px rgba(0,0,0,0.35), 0 5px 14px rgba(0,0,0,0.55)',
+          },
+          '&:active': {
+            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.5)',
+          },
+        }}
       >
-        <EmojiEmotionsIcon />
+        <CampaignIcon sx={{ filter: 'drop-shadow(0 1px 1px rgba(255,255,255,0.6))' }} />
       </Fab>
 
       {/* Click-away catcher (transparent — keeps the game visible). */}
@@ -135,11 +152,39 @@ export function Soundboard({ playSound, sp = 0, soundPlaying = false, onCheat })
                       disabled={locked}
                       onClick={() => trigger(key)}
                       sx={{
-                        bgcolor: color,
                         color: '#fff',
                         fontSize: 24,        // size of the emoji glyph
                         lineHeight: 1,
-                        '&:hover': { bgcolor: color, filter: 'brightness(1.12)' },
+                        // Glossy "button cap": a radial highlight up top fading into the
+                        // button's colour, a crisp rim, an inner sheen + colour glow.
+                        background: `radial-gradient(120% 120% at 30% 22%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.12) 26%, ${color} 60%, ${color} 100%)`,
+                        border: '1px solid rgba(255,255,255,0.35)',
+                        boxShadow: `inset 0 1px 2px rgba(255,255,255,0.55), inset 0 -3px 5px rgba(0,0,0,0.35), 0 3px 8px rgba(0,0,0,0.45), 0 0 10px ${color}66`,
+                        textShadow: '0 1px 2px rgba(0,0,0,0.55)',
+                        transition: 'transform 120ms ease, box-shadow 120ms ease, filter 120ms ease',
+                        // Glassy top sheen overlay (upper half).
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          inset: 1,
+                          borderRadius: '50%',
+                          background: 'linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 52%)',
+                          pointerEvents: 'none',
+                        },
+                        '&:hover': {
+                          filter: 'brightness(1.12)',
+                          transform: 'translateY(-1px)',
+                          boxShadow: `inset 0 1px 2px rgba(255,255,255,0.6), inset 0 -3px 5px rgba(0,0,0,0.35), 0 5px 12px rgba(0,0,0,0.5), 0 0 16px ${color}99`,
+                        },
+                        '&:active': {
+                          transform: 'translateY(1px)',
+                          boxShadow: `inset 0 2px 5px rgba(0,0,0,0.45), 0 1px 4px rgba(0,0,0,0.4)`,
+                        },
+                        '&.Mui-disabled': {
+                          background: `radial-gradient(120% 120% at 30% 22%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.04) 26%, ${color} 60%)`,
+                          filter: 'grayscale(0.5) brightness(0.7)',
+                          color: 'rgba(255,255,255,0.7)',
+                        },
                       }}
                     >
                       <span aria-hidden="true">{icon}</span>
@@ -156,9 +201,28 @@ export function Soundboard({ playSound, sp = 0, soundPlaying = false, onCheat })
                     aria-label="Cheat: gain 10 SP"
                     onClick={() => onCheat?.()}
                     sx={{
-                      bgcolor: '#2e7d32',
                       color: '#fff',
-                      '&:hover': { bgcolor: '#2e7d32', filter: 'brightness(1.12)' },
+                      background: 'radial-gradient(120% 120% at 30% 22%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.12) 26%, #2e7d32 60%, #2e7d32 100%)',
+                      border: '1px solid rgba(255,255,255,0.35)',
+                      boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.55), inset 0 -3px 5px rgba(0,0,0,0.35), 0 3px 8px rgba(0,0,0,0.45), 0 0 10px #2e7d3266',
+                      transition: 'transform 120ms ease, box-shadow 120ms ease, filter 120ms ease',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        inset: 1,
+                        borderRadius: '50%',
+                        background: 'linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 52%)',
+                        pointerEvents: 'none',
+                      },
+                      '&:hover': {
+                        filter: 'brightness(1.12)',
+                        transform: 'translateY(-1px)',
+                        boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.6), inset 0 -3px 5px rgba(0,0,0,0.35), 0 5px 12px rgba(0,0,0,0.5), 0 0 16px #2e7d3299',
+                      },
+                      '&:active': {
+                        transform: 'translateY(1px)',
+                        boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.45), 0 1px 4px rgba(0,0,0,0.4)',
+                      },
                     }}
                   >
                     <AddIcon />
@@ -166,6 +230,45 @@ export function Soundboard({ playSound, sp = 0, soundPlaying = false, onCheat })
                 </Tooltip>
               )}
             </Box>
+
+            {/* STOP: cuts the current sound short for the whole room. Only the player
+                who STARTED the sound can use it (canStop). */}
+            <Button
+              fullWidth
+              startIcon={<StopIcon />}
+              disabled={!canStop}
+              onClick={() => stopSound?.()}
+              aria-label="Stop the playing sound"
+              sx={{
+                mt: 0.5,
+                fontWeight: 800,
+                letterSpacing: 1.5,
+                color: '#fff',
+                borderRadius: 2,
+                py: 0.75,
+                background: 'linear-gradient(180deg, #b71c1c 0%, #7f0e0e 100%)',
+                border: '1px solid rgba(255,255,255,0.22)',
+                boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.35), inset 0 -2px 4px rgba(0,0,0,0.4), 0 3px 8px rgba(0,0,0,0.45)',
+                textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+                transition: 'transform 120ms ease, box-shadow 120ms ease, filter 120ms ease',
+                '&:hover': {
+                  background: 'linear-gradient(180deg, #c62828 0%, #8b0f0f 100%)',
+                  filter: 'brightness(1.08)',
+                  boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.4), inset 0 -2px 4px rgba(0,0,0,0.4), 0 5px 12px rgba(0,0,0,0.5), 0 0 14px rgba(183,28,28,0.6)',
+                },
+                '&:active': {
+                  transform: 'translateY(1px)',
+                  boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.4)',
+                },
+                '&.Mui-disabled': {
+                  background: 'linear-gradient(180deg, #5a2222 0%, #3d1414 100%)',
+                  color: 'rgba(255,255,255,0.4)',
+                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.4)',
+                },
+              }}
+            >
+              Stop
+            </Button>
           </Box>
         </Slide>
       </Box>

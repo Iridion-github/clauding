@@ -53,7 +53,7 @@ function FlippingHusksAppInner() {
     nextRoundVotes, voteNextRound, nextRoundDeadline,
     leaveGameVotes, voteLeaveGame, withdrawLeaveGame,
     joinRoom, startGame, sendAction, leaveRoom,
-    playSound, soundPlaying, cheatAddSp,
+    playSound, stopSound, soundPlaying, iStartedSound, cheatAddSp,
   } = useFlippingHusks();
 
   // When launched as a Discord Activity, do the SDK/OAuth handshake and learn the
@@ -237,6 +237,8 @@ function FlippingHusksAppInner() {
         )}
         <Soundboard
           playSound={playSound}
+          stopSound={stopSound}
+          canStop={soundPlaying && iStartedSound}
           sp={gameState.players[playerId]?.sp ?? 0}
           soundPlaying={soundPlaying}
           onCheat={cheatAddSp}

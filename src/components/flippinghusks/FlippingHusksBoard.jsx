@@ -24,7 +24,7 @@ function truncateName(name, max = 16) {
   return name.length > max ? name.slice(0, max - 1) + '…' : name;
 }
 
-export function FlippingHusksBoard({ gameState, playerId, connected = true, roomPlayers = [], isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain, nextRoundVotes, voteNextRound, nextRoundDeadline, leaveGameVotes = { votes: [], players: [] }, voteLeaveGame, withdrawLeaveGame, onLeaveGame, animating }) {
+export function FlippingHusksBoard({ gameState, playerId, connected = true, roomPlayers = [], spectators = [], isSpectator = false, isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain, nextRoundVotes, voteNextRound, nextRoundDeadline, leaveGameVotes = { votes: [], players: [] }, voteLeaveGame, withdrawLeaveGame, onLeaveGame, animating }) {
   const { players, playerOrder, activePlayerId, phase, round, drawPile, discardCount, log, winner, pendingAction } = gameState;
   const offlineIds = new Set(roomPlayers.filter(p => p.connected === false).map(p => p.id));
   const self = players[playerId];
@@ -62,16 +62,21 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
               <Chip label={`Deck ${drawPile.length} · ${discardCount ?? 0} used`} size="small" variant="outlined" />
               {phase === 'round_end' && <Chip label="Round over" color="warning" size="small" />}
               {phase === 'finished'  && <Chip label={`${players[winner].name} wins!`} color="primary" />}
+              {isSpectator && <Chip label="👁 Spectating" size="small" color="info" />}
+              {!isSpectator && spectators.length > 0 && (
+                <Chip label={`👁 ${spectators.length} watching`} size="small" variant="outlined" />
+              )}
             </Stack>
-            {/* Leave Game: top-right on desktop (the chips' flex:1 pushes it to the
-                main column's right edge, just outside the log window); on mobile it
-                sits to the left of the Log toggle. */}
-            {gameInProgress && (
+            {/* Leave: top-right on desktop (the chips' flex:1 pushes it to the main
+                column's right edge, just outside the log window); on mobile it sits to
+                the left of the Log toggle. Spectators leave instantly (they hold no game
+                state); players cast the unanimous leave-game vote instead. */}
+            {(isSpectator || gameInProgress) && (
               <Chip
                 className="fhleave-chip"
                 label="Leave"
                 size="small"
-                onClick={voteLeaveGame}
+                onClick={isSpectator ? onLeaveGame : voteLeaveGame}
                 variant="outlined"
                 sx={{ cursor: 'pointer', flexShrink: 0 }}
               />
@@ -129,7 +134,8 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
           </div>
         )}
 
-        {/* My area */}
+        {/* My area — spectators have no hand of their own, so it's hidden for them. */}
+        {!isSpectator && (
         <div className="fhboard-me-wrap">
           <div className="fhboard-me">
             <div className="fhboard-me-header">
@@ -163,6 +169,7 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
             </div>
           </div>
         </div>
+        )}
 
       </div>
 
@@ -197,12 +204,22 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
       {phase === 'round_end' && !animating && (
         <NextRoundCountdown
           totalMs={5000}
-          onExpire={voteNextRound}
+          // Spectators watch the countdown but never cast the next-round vote.
+          onExpire={isSpectator ? undefined : voteNextRound}
         />
       )}
 
       {/* ── Fixed action bar (bottom of main column) ─────────────────────── */}
-      {!myPendingIsOpen && (
+      {/* Spectators get a read-only status bar; players get the interactive bar. */}
+      {isSpectator ? (
+        <SpectatorActionBar
+          phase={phase}
+          players={players}
+          playerOrder={playerOrder}
+          activePlayerId={activePlayerId}
+          winner={winner}
+        />
+      ) : !myPendingIsOpen && (
         <FixedActionBar
           phase={phase} isMyTurn={isMyTurn} self={self}
           players={players} playerOrder={playerOrder}
@@ -345,6 +362,38 @@ function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePla
       >
         <span className="fhaction-btn-main">Stay</span>
       </button>
+    </div>
+  );
+}
+
+// ── Spectator action bar ──────────────────────────────────────────────────────
+// Read-only counterpart to FixedActionBar: spectators can't act, so this just
+// narrates the game. It still surfaces the scoreboard at round end / game over so
+// watchers see the standings, but offers no buttons (Leave lives in the header).
+function SpectatorActionBar({ phase, players, playerOrder, activePlayerId, winner }) {
+  if (phase === 'round_end') {
+    return (
+      <div className="fhaction-bar">
+        <Scoreboard players={players} playerOrder={playerOrder} />
+        <Typography className="fhaction-status">👁 Round over — watching…</Typography>
+      </div>
+    );
+  }
+  if (phase === 'finished') {
+    return (
+      <div className="fhaction-bar">
+        <Scoreboard players={players} playerOrder={playerOrder} final />
+        <Typography className="fhaction-status">
+          👁 {truncateName(players[winner]?.name) || 'Someone'} wins!
+        </Typography>
+      </div>
+    );
+  }
+  return (
+    <div className="fhaction-bar">
+      <Typography className="fhaction-status">
+        👁 Spectating — waiting for {truncateName(players[activePlayerId]?.name) || '…'} to act…
+      </Typography>
     </div>
   );
 }

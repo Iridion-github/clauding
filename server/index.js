@@ -15,9 +15,15 @@ const io = new Server(server, {
 });
 
 // ── Flipping Husks namespace ────────────────────────────────────────────────────────
-// fhRooms: { roomId: { hostId, players:[{socketId,id,name}], state } }
+// fhRooms: { roomId: { hostId, players:[{socketId,id,name}], spectators:[…], state } }
 const fhRooms = {};
 const fhSocketToRoom = {};
+
+// A room seats up to MAX_PLAYERS active players. Once it's full, further arrivals
+// join as Spectators (up to MAX_SPECTATORS): they watch the game with their own
+// local settings applied, but can't take turns or use the Soundboard.
+const MAX_PLAYERS = 6;
+const MAX_SPECTATORS = 6;
 
 const fh = io.of('/flippinghusks');
 
@@ -131,6 +137,32 @@ const ROOM_CLEANUP_MS = 5 * 60 * 1000;
 function roster(room) {
   return room.players.map(p => ({ id: p.id, name: p.name, connected: p.connected !== false }));
 }
+function spectatorRoster(room) {
+  return (room.spectators || []).map(p => ({ id: p.id, name: p.name, connected: p.connected !== false }));
+}
+// Single place that broadcasts the lobby/roster so players AND spectators always
+// travel together — every caller stays in sync without repeating the payload shape.
+function emitRoomUpdate(roomId) {
+  const room = fhRooms[roomId];
+  if (!room) return;
+  fh.to(roomId).emit('fh_room_update', {
+    players: roster(room),
+    spectators: spectatorRoster(room),
+    hostId: room.hostId,
+  });
+}
+// Hand a (re)joining socket the live game state so it catches up instantly. Shared
+// by player reconnects, spectator reconnects, and spectators who join mid-game.
+function sendResync(socket, room) {
+  if (!room.state) return;
+  socket.emit('fh_resync', {
+    state: fhClientState(room.state),
+    nextRoundDeadline: room.nextRoundDeadline ?? null,
+    nextRoundVotes: { votes: [...room.nextRoundVotes], players: roster(room) },
+    playAgainVotes: { votes: [...room.playAgainVotes], players: roster(room) },
+    leaveGameVotes: { votes: [...(room.leaveGameVotes || [])], players: roster(room) },
+  });
+}
 function connectedCount(room) {
   return room.players.filter(p => p.connected !== false).length;
 }
@@ -179,7 +211,7 @@ function maybeCloseRoomOnLeave(roomId) {
 fh.on('connection', (socket) => {
   console.log('[FlippingHusks] Connected:', socket.id);
 
-  socket.on('fh_join', ({ roomId, playerName, playerId }) => {
+  socket.on('fh_join', ({ roomId, playerName, playerId, asSpectator }) => {
     const stableId = playerId || socket.id; // stable client identity (falls back for old clients)
     let room = fhRooms[roomId];
 
@@ -193,25 +225,33 @@ fh.on('connection', (socket) => {
       socket.join(roomId);
       cancelRoomCleanup(room);
 
-      socket.emit('fh_joined', { roomId, playerId: stableId, isHost: room.hostId === stableId });
+      socket.emit('fh_joined', { roomId, playerId: stableId, isHost: room.hostId === stableId, spectator: false });
       // Hand the reconnecting player the live state so they catch up instantly.
-      if (room.state) {
-        socket.emit('fh_resync', {
-          state: fhClientState(room.state),
-          nextRoundDeadline: room.nextRoundDeadline ?? null,
-          nextRoundVotes: { votes: [...room.nextRoundVotes], players: roster(room) },
-          playAgainVotes: { votes: [...room.playAgainVotes], players: roster(room) },
-          leaveGameVotes: { votes: [...(room.leaveGameVotes || [])], players: roster(room) },
-        });
-      }
-      fh.to(roomId).emit('fh_room_update', { players: roster(room), hostId: room.hostId });
+      sendResync(socket, room);
+      emitRoomUpdate(roomId);
+      return;
+    }
+
+    // ── Spectator reconnect: a known watcher resuming (e.g. a Discord reload) ────
+    const existingSpectator = room?.spectators?.find(p => p.id === stableId);
+    if (room && existingSpectator) {
+      existingSpectator.socketId  = socket.id;
+      existingSpectator.connected = true;
+      if (playerName) existingSpectator.name = playerName;
+      fhSocketToRoom[socket.id] = { roomId, playerId: stableId, spectator: true };
+      socket.join(roomId);
+      cancelRoomCleanup(room);
+
+      socket.emit('fh_joined', { roomId, playerId: stableId, isHost: false, spectator: true });
+      sendResync(socket, room);
+      emitRoomUpdate(roomId);
       return;
     }
 
     // ── Fresh join ──────────────────────────────────────────────────────────────
     if (!room) {
       room = fhRooms[roomId] = {
-        hostId: stableId, players: [], state: null,
+        hostId: stableId, players: [], spectators: [], state: null,
         playAgainVotes: new Set(), nextRoundVotes: new Set(),
         leaveGameVotes: new Set(),
         nextRoundTimer: null, nextRoundDeadline: null,
@@ -232,6 +272,7 @@ fh.on('connection', (socket) => {
       if (room.soundLockTimer) { clearTimeout(room.soundLockTimer); room.soundLockTimer = null; }
       room.state = null;
       room.players = [];
+      room.spectators = [];
       room.hostId = stableId;
       room.playAgainVotes.clear();
       room.nextRoundVotes.clear();
@@ -242,16 +283,39 @@ fh.on('connection', (socket) => {
       console.log('[FlippingHusks] Abandoned game recycled into a fresh lobby:', roomId);
     }
 
+    // ── Join as a Spectator ─────────────────────────────────────────────────────
+    // Either the player roster is full, or the arrival explicitly chose to spectate
+    // (the lobby "Spectate" button) even though seats remain. Works whether the room
+    // is still in the lobby or already mid-game: spectators never affect game state,
+    // so they can safely start watching at any point.
+    if (asSpectator || room.players.length >= MAX_PLAYERS) {
+      if (!room.spectators) room.spectators = [];
+      if (room.spectators.length >= MAX_SPECTATORS) {
+        socket.emit('fh_error', { message: 'Room is full (6 players + 6 spectators).' });
+        return;
+      }
+      room.spectators.push({ socketId: socket.id, id: stableId, name: playerName, connected: true });
+      fhSocketToRoom[socket.id] = { roomId, playerId: stableId, spectator: true };
+      socket.join(roomId);
+      cancelRoomCleanup(room);
+
+      socket.emit('fh_joined', { roomId, playerId: stableId, isHost: false, spectator: true });
+      if (room.state) sendResync(socket, room); // a mid-game spectator gets the live state
+      emitRoomUpdate(roomId);
+      return;
+    }
+
+    // Fewer than the max players, but a game is already running → a brand-new player
+    // can't be dealt into an in-progress game (spectating is the only way in now).
     if (room.state) { socket.emit('fh_error', { message: 'Game already started.' }); return; }
-    if (room.players.length >= 6) { socket.emit('fh_error', { message: 'Room is full (max 6).' }); return; }
 
     room.players.push({ socketId: socket.id, id: stableId, name: playerName, connected: true });
     fhSocketToRoom[socket.id] = { roomId, playerId: stableId };
     socket.join(roomId);
     cancelRoomCleanup(room);
 
-    socket.emit('fh_joined', { roomId, playerId: stableId, isHost: room.hostId === stableId });
-    fh.to(roomId).emit('fh_room_update', { players: roster(room), hostId: room.hostId });
+    socket.emit('fh_joined', { roomId, playerId: stableId, isHost: room.hostId === stableId, spectator: false });
+    emitRoomUpdate(roomId);
   });
 
   socket.on('fh_start', ({ roomId, soundboardEnabled }) => {
@@ -276,6 +340,7 @@ fh.on('connection', (socket) => {
   socket.on('fh_action', ({ action, actionId }, ack) => {
     const meta = fhSocketToRoom[socket.id];
     if (!meta) { ack?.({ ok: false, error: 'Not in a room.' }); return; }
+    if (meta.spectator) { ack?.({ ok: false, error: 'Spectators cannot play.' }); return; }
     const room = fhRooms[meta.roomId];
     if (!room?.state) { ack?.({ ok: false, error: 'Game not started.' }); return; }
 
@@ -306,7 +371,7 @@ fh.on('connection', (socket) => {
 
   socket.on('fh_next_round_vote', () => {
     const meta = fhSocketToRoom[socket.id];
-    if (!meta) return;
+    if (!meta || meta.spectator) return;
     const room = fhRooms[meta.roomId];
     if (!room?.state || room.state.phase !== 'round_end') return;
 
@@ -325,7 +390,7 @@ fh.on('connection', (socket) => {
 
   socket.on('fh_play_again', () => {
     const meta = fhSocketToRoom[socket.id];
-    if (!meta) return;
+    if (!meta || meta.spectator) return;
     const room = fhRooms[meta.roomId];
     if (!room?.state || room.state.phase !== 'finished') return;
 
@@ -349,7 +414,7 @@ fh.on('connection', (socket) => {
   // false withdraws a previously-cast vote (the player closed the modal).
   socket.on('fh_leave_vote', ({ leaving } = {}) => {
     const meta = fhSocketToRoom[socket.id];
-    if (!meta) return;
+    if (!meta || meta.spectator) return;
     const room = fhRooms[meta.roomId];
     if (!room?.state) return;
     if (!room.leaveGameVotes) room.leaveGameVotes = new Set();
@@ -372,7 +437,7 @@ fh.on('connection', (socket) => {
   // push the updated state so SP counters refresh.
   socket.on('fh_play_sound', ({ emote } = {}) => {
     const meta = fhSocketToRoom[socket.id];
-    if (!meta) return;
+    if (!meta || meta.spectator) return; // spectators can't use the Soundboard
     const room = fhRooms[meta.roomId];
     if (!room?.state) return;
     if (!room.state.soundboardEnabled) return;   // host disabled the Soundboard this game
@@ -394,7 +459,7 @@ fh.on('connection', (socket) => {
   // The player who played the current sound reports it has finished → free the lock.
   socket.on('fh_sound_ended', () => {
     const meta = fhSocketToRoom[socket.id];
-    if (!meta) return;
+    if (!meta || meta.spectator) return;
     const room = fhRooms[meta.roomId];
     if (room && room.soundLock === meta.playerId) releaseSoundLock(meta.roomId);
   });
@@ -403,7 +468,7 @@ fh.on('connection', (socket) => {
   // Tell everyone to halt their local audio, then free the room lock.
   socket.on('fh_stop_sound', () => {
     const meta = fhSocketToRoom[socket.id];
-    if (!meta) return;
+    if (!meta || meta.spectator) return;
     const room = fhRooms[meta.roomId];
     if (!room || room.soundLock == null) return;        // nothing is playing
     if (room.soundLock !== meta.playerId) return;       // only the initiator can stop it
@@ -416,7 +481,7 @@ fh.on('connection', (socket) => {
   // real player in a running game.
   socket.on('fh_cheat_sp', () => {
     const meta = fhSocketToRoom[socket.id];
-    if (!meta) return;
+    if (!meta || meta.spectator) return;
     const room = fhRooms[meta.roomId];
     if (!room?.state) return;
     const player = room.state.players[meta.playerId];
@@ -436,6 +501,17 @@ fh.on('connection', (socket) => {
     if (!meta) return;
     const room = fhRooms[meta.roomId];
     if (!room) return;
+
+    // Spectators are free to stop watching at any time — they hold no game state, so
+    // there's no unanimous-leave vote, they just drop out of the spectator roster.
+    if (meta.spectator) {
+      room.spectators = (room.spectators || []).filter(p => p.id !== meta.playerId);
+      delete fhSocketToRoom[socket.id];
+      socket.leave(meta.roomId);
+      emitRoomUpdate(meta.roomId);
+      return;
+    }
+
     if (room.state && room.state.phase !== 'finished') return; // in-progress → use the vote
 
     const wasHost = room.hostId === meta.playerId;
@@ -464,7 +540,7 @@ fh.on('connection', (socket) => {
       delete fhRooms[meta.roomId];
     } else {
       if (wasHost) room.hostId = room.players[0].id;
-      fh.to(meta.roomId).emit('fh_room_update', { players: roster(room), hostId: room.hostId });
+      emitRoomUpdate(meta.roomId);
       if (room.state) fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
     }
   });
@@ -477,6 +553,24 @@ fh.on('connection', (socket) => {
     const room = fhRooms[meta.roomId];
     if (!room) return;
 
+    // ── Spectator dropped ───────────────────────────────────────────────────────
+    // Mid-game, keep them in the roster but flagged offline so a reconnect (e.g. a
+    // Discord reload) resumes them via resync. Pre-game (lobby), just drop them, the
+    // same way a disconnecting lobby player is removed. Game-progress decisions
+    // ignore spectators entirely.
+    if (meta.spectator) {
+      const spec = room.spectators?.find(p => p.id === meta.playerId);
+      if (spec && spec.socketId !== socket.id) return; // stale socket, already reconnected
+      if (room.state) {
+        if (spec) spec.connected = false;
+      } else {
+        room.spectators = (room.spectators || []).filter(p => p.id !== meta.playerId);
+      }
+      emitRoomUpdate(meta.roomId);
+      if (connectedCount(room) === 0 && room.state) scheduleRoomCleanup(meta.roomId);
+      return;
+    }
+
     const player = room.players.find(p => p.id === meta.playerId);
     // Ignore a stale socket whose player already reconnected on a newer socket.
     if (player && player.socketId !== socket.id) return;
@@ -485,7 +579,7 @@ fh.on('connection', (socket) => {
       // Game in progress → keep the player in the game (state stays valid) and
       // just mark them offline; they resume by reconnecting.
       if (player) player.connected = false;
-      fh.to(meta.roomId).emit('fh_room_update', { players: roster(room), hostId: room.hostId });
+      emitRoomUpdate(meta.roomId);
 
       // Drop any leave-game vote the now-offline player held, then re-check whether
       // the remaining online players are unanimous (which would close the room).
@@ -517,7 +611,7 @@ fh.on('connection', (socket) => {
       delete fhRooms[meta.roomId];
     } else {
       if (room.hostId === meta.playerId) room.hostId = room.players[0].id;
-      fh.to(meta.roomId).emit('fh_room_update', { players: roster(room), hostId: room.hostId });
+      emitRoomUpdate(meta.roomId);
     }
   });
 });

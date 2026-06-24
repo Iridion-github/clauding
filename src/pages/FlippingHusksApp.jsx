@@ -44,8 +44,8 @@ function FlippingHusksAppInner() {
   const DISCORD_SLOW_MS = 20000;
 
   const {
-    connected, playerId, isHost, hostId,
-    roomPlayers, gameState,
+    connected, playerId, isHost, isSpectator, hostId,
+    roomPlayers, spectators, gameState,
     isMyTurn,
     error, actionError,
     animQueue, advanceAnim,
@@ -138,9 +138,9 @@ function FlippingHusksAppInner() {
     }
   }, []);
 
-  function handleJoin(roomId, name) {
+  function handleJoin(roomId, name, asSpectator = false) {
     setCurrentRoomId(roomId);
-    joinRoom(roomId, name);
+    joinRoom(roomId, name, asSpectator);
   }
 
   const currentAnim = animQueue[0] ?? null;
@@ -198,6 +198,8 @@ function FlippingHusksAppInner() {
           playerId={playerId}
           connected={connected}
           roomPlayers={roomPlayers}
+          spectators={spectators}
+          isSpectator={isSpectator}
           isMyTurn={isMyTurn}
           actionError={actionError}
           sendAction={sendAction}
@@ -235,7 +237,7 @@ function FlippingHusksAppInner() {
             {bgmMuted ? <VolumeOffIcon /> : <VolumeUpIcon />}
           </Fab>
         )}
-        {gameState.soundboardEnabled && (
+        {gameState.soundboardEnabled && !isSpectator && (
           <Soundboard
             playSound={playSound}
             stopSound={stopSound}
@@ -287,8 +289,10 @@ function FlippingHusksAppInner() {
       connected={connected}
       playerId={playerId}
       isHost={isHost}
+      isSpectator={isSpectator}
       hostId={hostId}
       roomPlayers={roomPlayers}
+      spectators={spectators}
       roomId={currentRoomId}
       error={error}
       discord={discordInfo}

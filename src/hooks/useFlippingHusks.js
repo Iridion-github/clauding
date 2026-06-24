@@ -40,7 +40,9 @@ export function useFlippingHusks() {
   const [connected, setConnected]     = useState(false);
   const [playerId, setPlayerId]       = useState(null);
   const [isHost, setIsHost]           = useState(false);
+  const [isSpectator, setIsSpectator] = useState(false); // joined a full room → watch only
   const [roomPlayers, setRoomPlayers] = useState([]);
+  const [spectators, setSpectators]   = useState([]);
   const [hostId, setHostId]           = useState(null);
   const [gameState, setGameState]     = useState(null);
   const [error, setError]             = useState(null);
@@ -68,18 +70,22 @@ export function useFlippingHusks() {
       setConnected(true);
       // (Re)join automatically so a reconnecting player resyncs to live state.
       const j = joinInfoRef.current;
-      if (j) socket.emit('fh_join', { roomId: j.roomId, playerName: j.name, playerId: clientId });
+      if (j) socket.emit('fh_join', { roomId: j.roomId, playerName: j.name, playerId: clientId, asSpectator: !!j.asSpectator });
     });
     socket.on('disconnect', () => setConnected(false));
 
-    socket.on('fh_joined', ({ playerId: pid, isHost: h }) => {
+    socket.on('fh_joined', ({ playerId: pid, isHost: h, spectator }) => {
       setPlayerId(pid);
-      setIsHost(h);
+      setIsSpectator(!!spectator);
+      setIsHost(!spectator && h);
     });
-    socket.on('fh_room_update', ({ players, hostId: hid }) => {
+    socket.on('fh_room_update', ({ players, spectators: specs, hostId: hid }) => {
       setRoomPlayers(players);
+      setSpectators(specs ?? []);
       setHostId(hid);
-      setIsHost(clientId === hid);
+      // A spectator is never the host, even if their id somehow matched.
+      const watching = (specs ?? []).some(s => s.id === clientId);
+      setIsHost(!watching && clientId === hid);
     });
     socket.on('fh_game_started', ({ state }) => {
       prevStateRef.current = state;
@@ -176,8 +182,10 @@ export function useFlippingHusks() {
       prevStateRef.current = null;
       setGameState(null);
       setRoomPlayers([]);
+      setSpectators([]);
       setHostId(null);
       setIsHost(false);
+      setIsSpectator(false);
       setAnimQueue([]);
       setPlayAgainVotes({ votes: [], players: [] });
       setNextRoundVotes({ votes: [], players: [] });
@@ -195,9 +203,9 @@ export function useFlippingHusks() {
     };
   }, []);
 
-  const joinRoom = useCallback((roomId, name) => {
-    joinInfoRef.current = { roomId, name }; // remembered so reconnects auto-rejoin
-    socketRef.current?.emit('fh_join', { roomId, playerName: name, playerId: clientIdRef.current });
+  const joinRoom = useCallback((roomId, name, asSpectator = false) => {
+    joinInfoRef.current = { roomId, name, asSpectator }; // remembered so reconnects auto-rejoin in the same role
+    socketRef.current?.emit('fh_join', { roomId, playerName: name, playerId: clientIdRef.current, asSpectator });
   }, []);
 
   const startGame = useCallback((roomId, soundboardEnabled) =>
@@ -277,8 +285,10 @@ export function useFlippingHusks() {
     prevStateRef.current = null;
     setGameState(null);
     setRoomPlayers([]);
+    setSpectators([]);
     setHostId(null);
     setIsHost(false);
+    setIsSpectator(false);
     setAnimQueue([]);
     setPlayAgainVotes({ votes: [], players: [] });
     setNextRoundVotes({ votes: [], players: [] });
@@ -291,8 +301,8 @@ export function useFlippingHusks() {
   const self     = gameState ? gameState.players[playerId] : null;
 
   return {
-    connected, playerId, isHost, hostId,
-    roomPlayers, gameState,
+    connected, playerId, isHost, isSpectator, hostId,
+    roomPlayers, spectators, gameState,
     isMyTurn, self,
     error, actionError,
     animQueue, advanceAnim,

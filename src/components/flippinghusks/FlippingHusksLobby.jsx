@@ -7,6 +7,7 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import StarIcon from '@mui/icons-material/Star';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import SchoolIcon from '@mui/icons-material/School';
 import SettingsIcon from '@mui/icons-material/Settings';
 import CampaignIcon from '@mui/icons-material/Campaign';
@@ -35,7 +36,7 @@ const CARD_BTN_SX = {
   '&.Mui-disabled': { color: '#d8ffe9', opacity: 0.35 },
 };
 
-export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPlayers, roomId, error, discord, onJoin, onStart, onLeaveRoom }) {
+export function FlippingHusksLobby({ connected, playerId, isHost, isSpectator, hostId, roomPlayers, spectators = [], roomId, error, discord, onJoin, onStart, onLeaveRoom }) {
   const navigate = useNavigate();
   // Inside a Discord Activity the room code and name come from Discord and must
   // NEVER be editable — not on first load, not after leaving a game. Detect it from
@@ -55,10 +56,11 @@ export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPl
     setSoundboardEnabled(on);
     localStorage.setItem('fh_soundboard', on ? 'on' : 'off');
   }
-  const inRoom = roomPlayers.length > 0;
+  const inRoom = roomPlayers.length > 0 || isSpectator;
 
-  function handleJoin(e) {
-    e.preventDefault();
+  // Shared by both entry buttons. `asSpectator` forces the watch-only role even when
+  // the room still has open player seats (the Spectate button); Join leaves it false.
+  function submitJoin(asSpectator) {
     // Discord supplies fixed values; otherwise use (and remember) the typed ones.
     const room = isDiscord ? (discord?.roomId ?? inputRoomId.trim()) : inputRoomId.trim().toUpperCase();
     const playerName = isDiscord ? (discord?.name ?? name.trim()) : name.trim();
@@ -67,8 +69,13 @@ export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPl
       localStorage.setItem('fh_roomCode', room);
       localStorage.setItem('fh_playerName', playerName);
     }
-    onJoin(room, playerName);
+    onJoin(room, playerName, asSpectator);
   }
+  function handleJoin(e) {
+    e.preventDefault();
+    submitJoin(false);
+  }
+  const cannotJoin = !connected || !name.trim() || !inputRoomId.trim();
 
   return (
     <Box className="fh-bg" sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', px: 3, py: 6, position: 'relative' }}>
@@ -110,9 +117,16 @@ export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPl
               helperText={isDiscord ? 'From your Discord profile' : undefined} />
             {error && <Alert severity="error">{error}</Alert>}
             <Button type="submit" size="large" fullWidth
-              disabled={!connected || !name.trim() || !inputRoomId.trim()}
+              disabled={cannotJoin}
               sx={CARD_BTN_SX}>
               Join Room
+            </Button>
+            <Button type="button" size="large" fullWidth
+              startIcon={<VisibilityIcon />}
+              disabled={cannotJoin}
+              onClick={() => submitJoin(true)}
+              sx={CARD_BTN_SX}>
+              Spectate
             </Button>
             <Button variant="contained" color="secondary" size="large" fullWidth
               startIcon={<SchoolIcon />} onClick={() => setShowTutorial(true)}>
@@ -127,12 +141,12 @@ export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPl
       ) : (
         <Box sx={{ width: '100%', maxWidth: 400 }}>
           <Stack spacing={2}>
-            <Box sx={{ background: 'rgba(255,255,255,0.04)', borderRadius: 2, p: 2 }}>
+            <Box sx={{ background: 'rgba(0,0,0,0.38)', borderRadius: 2, p: 2 }}>
               <Typography variant="overline" color="text.secondary">Room</Typography>
               <Typography variant="h5" fontWeight="bold" letterSpacing={4}>{roomId || '—'}</Typography>
             </Box>
 
-            <Box sx={{ background: 'rgba(255,255,255,0.04)', borderRadius: 2, p: 2 }}>
+            <Box sx={{ background: 'rgba(0,0,0,0.38)', borderRadius: 2, p: 2 }}>
               <Typography variant="overline" color="text.secondary">
                 Players ({roomPlayers.length}/6)
               </Typography>
@@ -153,13 +167,45 @@ export function FlippingHusksLobby({ connected, playerId, isHost, hostId, roomPl
               </List>
             </Box>
 
+            {/* Spectators — always shown (mirrors the Players indicator), even at 0/6. */}
+            <Box sx={{ background: 'rgba(0,0,0,0.38)', borderRadius: 2, p: 2 }}>
+                <Typography variant="overline" color="text.secondary">
+                  Spectators ({spectators.length}/6)
+                </Typography>
+                <List dense disablePadding sx={{ mt: 1 }}>
+                  {spectators.map(s => (
+                    <ListItem key={s.id} disableGutters sx={{ py: 0.5 }}>
+                      <ListItemText
+                        primary={
+                          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                            <VisibilityIcon fontSize="small" color="disabled" />
+                            <Typography>{s.name}</Typography>
+                            {s.id === playerId && <Chip label="You" size="small" variant="outlined" />}
+                          </Stack>
+                        }
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </Box>
+
             {error && <Alert severity="error">{error}</Alert>}
 
-            {isHost ? (
+            {isSpectator ? (
+              <Alert severity="info" icon={<VisibilityIcon />}
+                sx={{
+                  background: 'rgba(0,0,0,0.38)', borderRadius: 2, color: '#fff',
+                  '& .MuiAlert-icon': { color: '#fff' },
+                }}>
+                You have joined as a <strong>Spectator</strong>. You can watch the game
+                with your own Settings applied, but can't play nor use the Soundboard (if
+                active).
+              </Alert>
+            ) : isHost ? (
               <>
                 {/* Host picks whether the in-game Soundboard is available this game.
                     Green when on, grey when off. */}
-                <Box sx={{ background: 'rgba(255,255,255,0.04)', borderRadius: 2, px: 2, py: 1 }}>
+                <Box sx={{ background: 'rgba(0,0,0,0.38)', borderRadius: 2, px: 2, py: 1 }}>
                   <FormControlLabel
                     sx={{ m: 0, width: '100%', justifyContent: 'space-between' }}
                     labelPlacement="start"

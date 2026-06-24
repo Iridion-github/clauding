@@ -21,7 +21,7 @@ function CardRow({ cards, children }) {
   return (
     <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', justifyContent: 'center', rowGap: 1 }}>
       {cards
-        ? cards.map((c, i) => <FlippingHusksCard key={i} card={c} small />)
+        ? cards.map((c, i) => <FlippingHusksCard key={i} card={c} />)
         : children}
     </Stack>
   );
@@ -31,9 +31,9 @@ function CardRow({ cards, children }) {
 function GlowCard({ card, color }) {
   return (
     <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-      <FlippingHusksCard card={card} small />
+      <FlippingHusksCard card={card} />
       <Box sx={{
-        position: 'absolute', inset: 0, borderRadius: '9px',
+        position: 'absolute', inset: 0, borderRadius: '14px',
         border: `3px solid ${color}`, boxShadow: `0 0 16px ${color}`,
         pointerEvents: 'none',
       }} />
@@ -67,7 +67,7 @@ const STEPS = [
       <Stack spacing={2} sx={{ alignItems: 'center' }}>
         <H>Race to 200 points</H>
         <CardRow>
-          <FlippingHusksCard card={num(0)} faceDown small />
+          <FlippingHusksCard card={num(0)} faceDown />
         </CardRow>
         <P>
           Each round you <b>flip cards</b> to build a score. On your turn you press
@@ -102,7 +102,7 @@ const STEPS = [
       <Stack spacing={2} sx={{ alignItems: 'center' }}>
         <H>Beware of duplicates!</H>
         <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-          <FlippingHusksCard card={num(7)} small />
+          <FlippingHusksCard card={num(7)} />
           <Typography sx={{ fontSize: 28 }} color="text.secondary">+</Typography>
           <GlowCard card={num(7)} color="#ff5252" />
         </Stack>
@@ -154,7 +154,7 @@ const STEPS = [
         <H>Cards that change the game</H>
         <Stack spacing={2} sx={{ width: '100%', maxWidth: 460 }}>
           <Stack direction="row" spacing={2} sx={{ alignItems: 'center', textAlign: 'left' }}>
-            <FlippingHusksCard card={freeze} small />
+            <FlippingHusksCard card={freeze} />
             <Box>
               <Typography fontWeight="bold" color="#7ec8ff">Freeze</Typography>
               <Typography sx={{ fontSize: 13.5 }} color="text.secondary">
@@ -164,7 +164,7 @@ const STEPS = [
             </Box>
           </Stack>
           <Stack direction="row" spacing={2} sx={{ alignItems: 'center', textAlign: 'left' }}>
-            <FlippingHusksCard card={flip3} small />
+            <FlippingHusksCard card={flip3} />
             <Box>
               <Typography fontWeight="bold" color="#d6e02a">Flip Three</Typography>
               <Typography sx={{ fontSize: 13.5 }} color="text.secondary">
@@ -174,7 +174,7 @@ const STEPS = [
             </Box>
           </Stack>
           <Stack direction="row" spacing={2} sx={{ alignItems: 'center', textAlign: 'left' }}>
-            <FlippingHusksCard card={chance} small />
+            <FlippingHusksCard card={chance} />
             <Box>
               <Typography fontWeight="bold" color="#ff8a8a">Second Chance</Typography>
               <Typography sx={{ fontSize: 13.5 }} color="text.secondary">
@@ -193,13 +193,13 @@ const STEPS = [
       <Stack spacing={2} sx={{ alignItems: 'center', width: '100%' }}>
         <H>How a round adds up</H>
         <Stack direction="row" spacing={0.8} sx={{ alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', rowGap: 0.8 }}>
-          <FlippingHusksCard card={num(3)} small />
-          <FlippingHusksCard card={num(7)} small />
-          <FlippingHusksCard card={num(5)} small />
+          <FlippingHusksCard card={num(3)} />
+          <FlippingHusksCard card={num(7)} />
+          <FlippingHusksCard card={num(5)} />
           <Typography sx={{ fontSize: 22 }} color="text.secondary">+</Typography>
-          <FlippingHusksCard card={mod(4)} small />
+          <FlippingHusksCard card={mod(4)} />
           <Typography sx={{ fontSize: 22 }} color="text.secondary">x</Typography>
-          <FlippingHusksCard card={x2} small />
+          <FlippingHusksCard card={x2} />
         </Stack>
         <Box sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 2, p: 2, maxWidth: 420, width: '100%' }}>
           <Stack spacing={0.5}>
@@ -223,10 +223,26 @@ const STEPS = [
         <Stack direction="row" spacing={2.5} sx={{ justifyContent: 'center' }}>
           {EMOTES.map(({ key, label, icon, color }) => (
             <Stack key={key} spacing={0.75} sx={{ alignItems: 'center' }}>
+              {/* Mirrors the live Soundboard's glossy "button cap" (Soundboard.jsx):
+                  radial highlight, bright rim, layered shadow + colour glow, and a
+                  glassy top sheen via ::before. */}
               <Box sx={{
-                width: 54, height: 54, borderRadius: '50%', bgcolor: color,
+                position: 'relative',
+                width: 54, height: 54, borderRadius: '50%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 27, boxShadow: '0 4px 14px rgba(0,0,0,0.5)',
+                fontSize: 27, color: '#fff',
+                background: `radial-gradient(120% 120% at 30% 22%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.12) 26%, ${color} 60%, ${color} 100%)`,
+                border: '1px solid rgba(255,255,255,0.35)',
+                boxShadow: `inset 0 1px 2px rgba(255,255,255,0.55), inset 0 -3px 5px rgba(0,0,0,0.35), 0 3px 8px rgba(0,0,0,0.45), 0 0 10px ${color}66`,
+                textShadow: '0 1px 2px rgba(0,0,0,0.55)',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  inset: 1,
+                  borderRadius: '50%',
+                  background: 'linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 52%)',
+                  pointerEvents: 'none',
+                },
               }}>
                 <span aria-hidden="true">{icon}</span>
               </Box>
@@ -238,8 +254,9 @@ const STEPS = [
           Open the <b>Soundboard</b> with the round button on the left during a game.
           Each button plays a <b>random</b> sound that <b>every player hears</b>:
           <b style={{ color: '#ff7b7b' }}> Anger</b>,
-          <b style={{ color: '#f5c518' }}> Mockery</b> or a
-          <b style={{ color: '#6fb3ff' }}> Jingle</b>.
+          <b style={{ color: '#f5c518' }}> Mockery</b>, a
+          <b style={{ color: '#6fb3ff' }}> Jingle</b> or
+          <b style={{ color: '#7fe0a5' }}> Success</b>.
         </P>
         <P>
           Sounds cost <b style={{ color: '#ffe08a' }}>Sound Points (SP)</b>. You start
@@ -259,12 +276,18 @@ const STEPS = [
     render: () => (
       <Stack spacing={2} sx={{ alignItems: 'center' }}>
         <H>That's the whole game</H>
-        <Typography sx={{ fontSize: { xs: 48, sm: 64 }, lineHeight: 1 }}>🌽</Typography>
+        <FlippingHusksCard card={num(0)} faceDown />
         <P>
           <b>Card</b> to chase points, <b>Stay</b> to keep them. Dodge duplicates,
           hunt for 7 unique numbers, and use action cards to swing the round.
         </P>
-        <P>First to <b style={{ color: '#f0c040' }}>200</b> wins. Good luck!</P>
+        <P>
+          Reach <b style={{ color: '#f0c040' }}>200</b> to win — but getting there
+          first isn't enough on its own. The <b>round still has to finish</b>, and
+          whoever has the <b>highest total at the end of that round</b> takes it, so a
+          rival can still overtake you before it's over.
+        </P>
+        <P>Good luck!</P>
       </Stack>
     ),
   },

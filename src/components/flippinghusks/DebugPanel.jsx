@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Box, Button, Fab, Slide, Typography } from '@mui/material';
 import BugReportIcon from '@mui/icons-material/BugReport';
 
@@ -18,19 +17,17 @@ const DEBUG_ACTIONS = [
 // just below it) that toggles a little panel of preview/force buttons. Bust and Flip 7
 // just play their animation; Freeze / Flip 3 / 2nd Chance force that card to be drawn;
 // Win jumps straight to the end screen. The parent wires `onAction(key)`.
-export function DebugPanel({ onAction }) {
-  const [open, setOpen] = useState(false);
-
+export function DebugPanel({ onAction, open = false, onToggle, onClose }) {
   return (
     <>
       <Fab
         size="small"
-        onClick={() => setOpen(o => !o)}
+        onClick={onToggle}
         aria-label={open ? 'Close debug menu' : 'Open debug menu'}
         sx={{
           // Sit just below the Soundboard button (which is vertically centred on the left).
           position: 'fixed', left: 16, top: '50%', transform: 'translateY(calc(-50% + 56px))',
-          zIndex: 1300,
+          zIndex: 2600,
           color: '#1a1c20',
           background: 'linear-gradient(145deg, #ffe9a8 0%, #f0c040 42%, #b8860b 100%)',
           border: '1px solid rgba(255,255,255,0.5)',
@@ -51,7 +48,7 @@ export function DebugPanel({ onAction }) {
 
       {/* Transparent click-away catcher — keeps the game visible. */}
       {open && (
-        <Box onClick={() => setOpen(false)} sx={{ position: 'fixed', inset: 0, zIndex: 1290 }} />
+        <Box onClick={onClose} sx={{ position: 'fixed', inset: 0, zIndex: 2590 }} />
       )}
 
       {/* Panel pinned to the right of the button, vertically aligned with it. */}
@@ -61,7 +58,7 @@ export function DebugPanel({ onAction }) {
           left: 64,
           top: '50%',
           transform: 'translateY(calc(-50% + 56px))',
-          zIndex: 1300,
+          zIndex: 2620,
         }}
       >
         <Slide direction="right" in={open} mountOnEnter unmountOnExit>

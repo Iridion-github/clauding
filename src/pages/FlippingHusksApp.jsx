@@ -32,6 +32,8 @@ export function FlippingHusksApp() {
 
 function FlippingHusksAppInner() {
   const [currentRoomId, setCurrentRoomId] = useState('');
+  // Which side panel is open ('sound' | 'debug' | null) — only one at a time.
+  const [openPanel, setOpenPanel] = useState(null);
   // Discord handshake state: not-in-Discord is treated as "ready" so the normal
   // website flow renders immediately.
   const [discordReady, setDiscordReady] = useState(!isDiscordActivity);
@@ -287,9 +289,19 @@ function FlippingHusksAppInner() {
             sp={gameState.players[playerId]?.sp ?? 0}
             soundPlaying={soundPlaying}
             onCheat={cheatAddSp}
+            open={openPanel === 'sound'}
+            onToggle={() => setOpenPanel(p => (p === 'sound' ? null : 'sound'))}
+            onClose={() => setOpenPanel(p => (p === 'sound' ? null : p))}
           />
         )}
-        {isSolo && !isSpectator && <DebugPanel onAction={handleDebugAction} />}
+        {isSolo && !isSpectator && (
+          <DebugPanel
+            onAction={handleDebugAction}
+            open={openPanel === 'debug'}
+            onToggle={() => setOpenPanel(p => (p === 'debug' ? null : 'debug'))}
+            onClose={() => setOpenPanel(p => (p === 'debug' ? null : p))}
+          />
+        )}
         {showVictory && gameState.winner && (
           <VictoryAnimation
             name={gameState.players[gameState.winner]?.name ?? 'Winner'}

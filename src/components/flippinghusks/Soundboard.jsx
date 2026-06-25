@@ -16,8 +16,7 @@ const CHEAT_WINDOW_MS = 3000;
 // only one sound can play room-wide at a time (the server enforces both). The SP
 // counter is only shown here, so it's only visible while the panel is open. The
 // panel uses the same themed backdrop as the playing field (the `fh-bg` class).
-export function Soundboard({ playSound, stopSound, canStop = false, sp = 0, soundPlaying = false, onCheat }) {
-  const [open, setOpen] = useState(false);
+export function Soundboard({ playSound, stopSound, canStop = false, sp = 0, soundPlaying = false, onCheat, open = false, onToggle, onClose }) {
   const [pending, setPending] = useState(false); // optimistic local lock between click and approval
   const [cheatUnlocked, setCheatUnlocked] = useState(false);
   const pendingTimer = useRef(null);
@@ -64,10 +63,10 @@ export function Soundboard({ playSound, stopSound, canStop = false, sp = 0, soun
     <>
       <Fab
         size="small"
-        onClick={() => setOpen(o => !o)}
+        onClick={onToggle}
         aria-label={open ? 'Close soundboard' : 'Open soundboard'}
         sx={{
-          position: 'fixed', left: 16, top: '50%', transform: 'translateY(-50%)', zIndex: 1300,
+          position: 'fixed', left: 16, top: '50%', transform: 'translateY(-50%)', zIndex: 2600,
           color: '#2a2d33',
           // Brushed-metal look: a vertical light→dark steel gradient for the body,
           // a bright top edge + dark bottom edge (bevel), and a soft inner sheen.
@@ -91,8 +90,8 @@ export function Soundboard({ playSound, stopSound, canStop = false, sp = 0, soun
       {/* Click-away catcher (transparent — keeps the game visible). */}
       {open && (
         <Box
-          onClick={() => setOpen(false)}
-          sx={{ position: 'fixed', inset: 0, zIndex: 1290 }}
+          onClick={onClose}
+          sx={{ position: 'fixed', inset: 0, zIndex: 2590 }}
         />
       )}
 
@@ -106,7 +105,7 @@ export function Soundboard({ playSound, stopSound, canStop = false, sp = 0, soun
           left: 64, // right of the small Fab (left:16 + ~40px wide + gap)
           top: '50%',
           transform: 'translateY(-50%)',
-          zIndex: 1300,
+          zIndex: 2620,
         }}
       >
         <Slide direction="right" in={open} mountOnEnter unmountOnExit>

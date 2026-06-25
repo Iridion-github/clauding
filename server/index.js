@@ -124,7 +124,7 @@ function advanceToNextRound(roomId) {
   const result = applyFlippingHusksAction(room.state, room.players[0].id, { type: 'NEXT_ROUND' });
   if (result.ok) {
     room.state = result.state;
-    fh.to(roomId).emit('fh_state_update', { state: fhClientState(room.state) });
+    broadcastState(roomId);
   }
 }
 
@@ -150,6 +150,19 @@ function emitRoomUpdate(roomId) {
     spectators: spectatorRoster(room),
     hostId: room.hostId,
   });
+}
+
+// Broadcast the live game state to the room, then clear the transient one-shot event
+// flags. reshuffleEvent / secondChanceEvent each drive a SINGLE client animation; if they
+// lingered on room.state, any LATER state emit (a Soundboard sound, the SP cheat, an
+// action retry, a reconnect refresh) would replay that animation a second time. Clearing
+// them right after the broadcast guarantees each event is sent — and animated — exactly once.
+function broadcastState(roomId) {
+  const room = fhRooms[roomId];
+  if (!room?.state) return;
+  fh.to(roomId).emit('fh_state_update', { state: fhClientState(room.state) });
+  room.state.reshuffleEvent = null;
+  room.state.secondChanceEvent = null;
 }
 // Hand a (re)joining socket the live game state so it catches up instantly. Shared
 // by player reconnects, spectator reconnects, and spectators who join mid-game.
@@ -361,7 +374,7 @@ fh.on('connection', (socket) => {
 
     if (actionId) room.lastActionIds[meta.playerId] = actionId;
     room.state = result.state;
-    fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
+    broadcastState(meta.roomId);
 
     // The round just ended → kick off the shared auto-advance countdown.
     if (room.state.phase === 'round_end' && !room.nextRoundTimer) {
@@ -407,7 +420,7 @@ fh.on('connection', (socket) => {
       room.leaveGameVotes.clear();
       room.lastActionIds = {};
       resetFlippingHusksGame(room.state);
-      fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
+      broadcastState(meta.roomId);
     }
   });
 
@@ -453,7 +466,7 @@ fh.on('connection', (socket) => {
     player.sp -= SOUND_COST;
     room.soundLock = meta.playerId;
     fh.to(meta.roomId).emit('fh_sound', { sound, playerId: meta.playerId });
-    fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
+    broadcastState(meta.roomId);
     room.soundLockTimer = setTimeout(() => releaseSoundLock(meta.roomId), SOUND_LOCK_MAX_MS);
   });
 
@@ -488,7 +501,7 @@ fh.on('connection', (socket) => {
     const player = room.state.players[meta.playerId];
     if (!player) return;
     player.sp += CHEAT_SP_BONUS;
-    fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
+    broadcastState(meta.roomId);
   });
 
   // Debug tools — only ever offered to a solo player (the client shows the panel only
@@ -505,7 +518,7 @@ fh.on('connection', (socket) => {
     if (!result.ok) { ack?.({ ok: false, error: result.error }); return; }
 
     room.state = result.state;
-    fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
+    broadcastState(meta.roomId);
 
     // Freezing yourself in solo ends the round → kick off the shared advance countdown.
     if (room.state.phase === 'round_end' && !room.nextRoundTimer) scheduleNextRound(meta.roomId);
@@ -563,7 +576,7 @@ fh.on('connection', (socket) => {
     } else {
       if (wasHost) room.hostId = room.players[0].id;
       emitRoomUpdate(meta.roomId);
-      if (room.state) fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
+      if (room.state) broadcastState(meta.roomId);
     }
   });
 

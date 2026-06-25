@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Chip, Stack, Typography, Box, useMediaQuery } from '@mui/material';
 import { FlippingHusksCard } from './FlippingHusksCard';
+import { playFx } from './soundFx';
 import './FlippingHusksBoard.css';
 
 const STATUS_COLOR = { active: 'default', stayed: 'success', busted: 'error', flippinghusks: 'primary' };
@@ -366,7 +367,7 @@ function FixedActionBar({ phase, isMyTurn, self, players, playerOrder, activePla
       <button
         className="fhaction-btn fhaction-btn-stay"
         disabled={self?.status !== 'active'}
-        onClick={() => { new Audio('/sounds/chicken.mp3').play().catch(() => {}); sendAction({ type: 'STAY' }); }}
+        onClick={() => { playFx('stay'); sendAction({ type: 'STAY' }); }}
       >
         <span className="fhaction-btn-main">Stay</span>
       </button>

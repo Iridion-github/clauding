@@ -10,16 +10,16 @@ const RAINBOW_STOPS = ['#ff3333','#ff9900','#ffee00','#33cc33','#3399ff','#cc33f
 // (modifiers / ×2) and the card back fall back to the default look.
 // These textless images carry no baked-in number/text — those are overlaid separately.
 const CF_NUMBER_IMG = {
-  0: 'Bagpipes.png',       1: 'Potion.png',         2: 'Mimic.png',
-  3: 'Beholder.png',       4: 'DisplacerBeast.png', 5: 'Dragon.png',
-  6: 'Echo.png',           7: 'Leyah.png',          8: 'Frederick.png',
-  9: 'Vikas.png',          10: 'Morzan.png',        11: 'Ecate.png',
-  12: 'Ashari.png',
+  0: 'Bagpipes.webp',       1: 'Potion.webp',         2: 'Mimic.webp',
+  3: 'Beholder.webp',       4: 'DisplacerBeast.webp', 5: 'Dragon.webp',
+  6: 'Echo.webp',           7: 'Leyah.webp',          8: 'Frederick.webp',
+  9: 'Vikas.webp',          10: 'Morzan.webp',        11: 'Ecate.webp',
+  12: 'Ashari.webp',
 };
 const CF_ACTION_IMG = {
-  freeze: 'FreezeTextless.png',
-  flip_three: 'FlipThreeTextless.png',
-  second_chance: 'SecondChanceTextless.png',
+  freeze: 'FreezeTextless.webp',
+  flip_three: 'FlipThreeTextless.webp',
+  second_chance: 'SecondChanceTextless.webp',
 };
 // In-world names overlaid on the (textless) action-card artwork. Each entry is the
 // list of lines to stack, rendered in the same gothic blackletter face as the numbers.
@@ -32,6 +32,19 @@ const CF_ACTION_TEXT = {
 function cfImageFor(card) {
   if (card.type === 'number') return CF_NUMBER_IMG[card.value] ?? null;
   return CF_ACTION_IMG[card.type] ?? null;
+}
+
+// Preload all ClassicFantasy art (every face + the back) so cards never pop-in on their
+// first reveal. Cheap now that they're small WebPs. Call once when that theme is active.
+let _cardImagesPreloaded = false;
+export function preloadCardImages() {
+  if (_cardImagesPreloaded) return;
+  _cardImagesPreloaded = true;
+  const base = `${process.env.PUBLIC_URL}/images/ClassicFantasy`;
+  const urls = [...Object.values(CF_NUMBER_IMG), ...Object.values(CF_ACTION_IMG)]
+    .map(f => `${base}/cards/${f}`);
+  urls.push(`${base}/cardBack.webp`);
+  for (const url of urls) { const img = new Image(); img.src = url; }
 }
 
 export function FlippingHusksCard({ card, faceDown = false, small = false, highlight = false, theme }) {
@@ -113,7 +126,7 @@ function CardBack({ small }) {
 // ─── ClassicFantasy Card Back ──────────────────────────────────────────────────
 // The cardBack.png artwork with the gold UnifrakturCook Light title overlaid.
 function ClassicFantasyCardBack({ small }) {
-  const src = `${process.env.PUBLIC_URL}/images/ClassicFantasy/cardBack.png`;
+  const src = `${process.env.PUBLIC_URL}/images/ClassicFantasy/cardBack.webp`;
   return (
     <div className={`fhcard fhcard-cf-back${small ? ' fhcard-small' : ''}`}>
       <img className="fhcard-cf-img" src={src} alt="card back" draggable={false} />

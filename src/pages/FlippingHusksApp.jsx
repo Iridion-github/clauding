@@ -12,6 +12,8 @@ import { CardThemeProvider } from '../components/flippinghusks/CardThemeContext'
 import { Soundboard } from '../components/flippinghusks/Soundboard';
 import { DebugPanel } from '../components/flippinghusks/DebugPanel';
 import { VictoryAnimation } from '../components/flippinghusks/VictoryAnimation';
+import { preloadCardImages } from '../components/flippinghusks/FlippingHusksCard';
+import { preloadFx, playFx } from '../components/flippinghusks/soundFx';
 import { loadSettings, musicSrcFor, BGM_VOLUME, applyAnimationSpeed, applyBackground } from '../components/flippinghusks/settingsStore';
 
 export function FlippingHusksApp() {
@@ -21,6 +23,9 @@ export function FlippingHusksApp() {
     const s = loadSettings();
     applyAnimationSpeed(s.animationSpeed);
     applyBackground(s.theme);
+    // Warm caches up-front so nothing pops/stutters on first use later.
+    preloadFx();
+    if (s.theme === 'classic_fantasy') preloadCardImages();
   }, []);
   // Provide the saved card theme to every card rendered in the lobby, board and animations.
   return (
@@ -88,7 +93,7 @@ function FlippingHusksAppInner() {
   const [showVictory, setShowVictory] = useState(false);
   useEffect(() => {
     if (gameState?.phase === 'finished') {
-      new Audio('/sounds/victory.mp3').play().catch(() => {});
+      playFx('victory');
       setShowVictory(true);
     } else {
       setShowVictory(false);

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { FlippingHusksCard } from './FlippingHusksCard';
 import { currentAnimationFactor } from './settingsStore';
+import { playFx } from './soundFx';
 import './CardDrawAnimation.css';
 
 // Phase timeline (ms):
@@ -170,10 +171,7 @@ export function CardDrawAnimation({ card, isBust, isFlippingHusks, secondChanceC
     : card.type === 'flip_three' ? 'flip3'
     : null;
 
-  useEffect(() => {
-    const audio = new Audio('/sounds/card-flipping.mp3');
-    audio.play().catch(() => {});
-  }, []);
+  useEffect(() => { playFx('cardFlip'); }, []);
 
   useEffect(() => {
     // Scale every phase timing by the saved speed so the JS timeline stays in sync
@@ -211,7 +209,7 @@ export function CardDrawAnimation({ card, isBust, isFlippingHusks, secondChanceC
       after(2000, () => {
         if (isBust) {
           setPhase('busting');
-          new Audio('/sounds/busted.mp3').play().catch(() => {});
+          playFx('busted');
         } else if (secondChanceCard) {
           setPhase('sc-show');
         } else if (scDraw) {
@@ -225,16 +223,16 @@ export function CardDrawAnimation({ card, isBust, isFlippingHusks, secondChanceC
         }
       }),
     ];
-    if (card.type === 'freeze')    t.push(after(1750, () => new Audio('/sounds/freeze.mp3').play().catch(() => {})));
-    if (card.type === 'flip_three')   t.push(after(1750, () => new Audio('/sounds/triple.mp3').play().catch(() => {})));
-    if (card.type === 'second_chance') t.push(after(1750, () => new Audio('/sounds/2nd-chance.mp3').play().catch(() => {})));
-    if (isFlippingHusks) t.push(after(1750, () => new Audio('/sounds/7-unique-numbers.mp3').play().catch(() => {})));
+    if (card.type === 'freeze')        t.push(after(1750, () => playFx('freeze')));
+    if (card.type === 'flip_three')    t.push(after(1750, () => playFx('flipThree')));
+    if (card.type === 'second_chance') t.push(after(1750, () => playFx('secondChance')));
+    if (isFlippingHusks)               t.push(after(1750, () => playFx('flipped7')));
     if (isBust)          t.push(after(4000, finish));
     if (secondChanceCard) {
       // After the offending card holds briefly, slice it in half + play the save sound.
       t.push(after(2600, () => {
         setPhase('sc-exit');
-        new Audio('/sounds/2nd-chance-activation.mp3').play().catch(() => {});
+        playFx('secondChanceActivation');
       }));
       t.push(after(2600 + SC_CUT_MS, finish));
     }

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { FlippingHusksCard } from './FlippingHusksCard';
 import { currentAnimationFactor } from './settingsStore';
+import { playFx } from './soundFx';
 import './ReshuffleAnimation.css';
 
 // A ring of real (face-down) card backs that burst out of a stack, swirl a full turn,
@@ -20,7 +21,7 @@ export function ReshuffleAnimation({ onDone }) {
   // Scale the timeline and the staggered card delays by the saved animation speed.
   const factor = currentAnimationFactor();
   useEffect(() => {
-    new Audio('/sounds/shuffle.mp3').play().catch(() => {});
+    playFx('shuffle');
     const t = setTimeout(onDone, 5000 * factor);
     return () => clearTimeout(t);
   }, [onDone, factor]);

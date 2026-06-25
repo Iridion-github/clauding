@@ -100,6 +100,10 @@
    on mobile (see the media query below). */
 .fhme-card { flex: 0 0 auto; line-height: 0; }
 
+/* A card that is mid-flight from the draw animation: it occupies its real slot (so the
+   fly can measure where to land) but stays invisible until the overlay card arrives. */
+.fhcard-incoming { opacity: 0; }
+
 /* ── Fixed action bar ────────────────────────────────────────────────────────── */
 .fhaction-bar {
   position: fixed;
@@ -580,16 +584,18 @@
   /* Shrink my-area chrome so the cards get the room, not the padding */
   .fhboard-me        { padding: 12px 12px; border-radius: 12px; }
   .fhboard-me-header { gap: 6px; margin-bottom: 10px; }
-  /* Own hand: up to 5 overlapped cards per row, then wrap to a new row below.
-     A grid (not flex) gives a true 5-per-row cap; each card overflows its column
-     to the right to create the overlap, so wrapped rows start cleanly at the left
-     edge with no negative-margin artifacts. */
+  /* Own hand: as many overlapped cards per row as actually FIT, then wrap to a new row.
+     A grid keeps wrapped rows flush-left (each card overflows its column to the right to
+     create the overlap). auto-fill adapts the column count to the screen width, and the
+     padding-right reserves the last card's right overhang — so on a narrow phone a row
+     wraps BEFORE a card would run off-screen instead of overflowing. */
   .fhboard-me-cards { min-height: 134px; gap: 0; justify-content: center; }
   .fhboard-me-cards:has(.fhme-card) {
     display: grid;
-    grid-template-columns: repeat(5, 63px);  /* column = the 33%-overlap step (94px − 31px) */
+    grid-template-columns: repeat(auto-fill, 63px);  /* column = the 33%-overlap step (94px − 31px) */
     justify-content: start;
     row-gap: 8px;
+    padding-right: 31px;   /* = card overhang (94 − 63), so the last card never clips the edge */
   }
   .fhme-card { width: 94px; height: 134px; }   /* 67% of 140×200 (−33%); overflows its 63px column → 33% overlap */
   .fhme-card .fhcard,

@@ -91,4 +91,55 @@ function clone(state) {
 function ok(state)    { return { ok: true, state }; }
 function err(error)   { return { ok: false, error }; }
 
-module.exports = { applyAction };
+// ── Debug tools (solo play only — gated by the server) ──────────────────────────
+// Force a specific outcome so the player can preview cards/animations on demand.
+let _dbgUid = 0;
+function dbgCard(type, value, label) {
+  // Unique, non-colliding id (deck card ids are `c<n>`).
+  return { id: `dbg${++_dbgUid}_${Date.now().toString(36)}`, type, value, label };
+}
+
+const DEBUG_DRAW_CARDS = {
+  freeze:        () => dbgCard('freeze', 0, 'Freeze'),
+  flip3:         () => dbgCard('flip_three', 0, 'Flip 3'),
+  second_chance: () => dbgCard('second_chance', 0, '2nd Chance'),
+};
+
+function applyDebug(state, playerId, kind) {
+  // Jump straight to a win: bank 200 pts and finish the game with this player on top.
+  if (kind === 'win') {
+    const next = clone(state);
+    const p = next.players[playerId];
+    if (!p) return err('No such player.');
+    p.totalScore  = 200;
+    p.roundScore  = p.roundScore ?? 0;
+    next.pendingAction = null;
+    next.dealQueue     = [];
+    next.winner = playerId;
+    next.phase  = 'finished';
+    next.log.unshift(`Game over! ${p.name} wins!`);
+    return ok(next);
+  }
+
+  // Card-draw kinds: force the chosen card onto the pile, then run the same path a
+  // normal HIT takes (so freeze/flip_three raise their pendingAction target picker).
+  const make = DEBUG_DRAW_CARDS[kind];
+  if (!make) return err(`Unknown debug kind: ${kind}`);
+
+  const next = clone(state);
+  if (next.phase !== 'playing') return err('Game is not in playing phase.');
+  const p = next.players[playerId];
+  if (!p) return err('No such player.');
+
+  // Make sure it's this player's active turn so the forced draw always applies.
+  next.activePlayerId = playerId;
+  p.status            = 'active';
+  next.pendingAction  = null;
+
+  next.drawPile.unshift(make());
+  drawAndProcess(next, playerId);
+  if (!next.pendingAction) advance(next);
+  return ok(next);
+}
+
+module.exports = { applyAction, applyDebug };

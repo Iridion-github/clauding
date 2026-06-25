@@ -77,3 +77,16 @@ export function discordRoomId(info) {
 export function discordPlayerName(info) {
   return info.user.global_name || info.user.username || 'Player';
 }
+
+// CDN URL for the Discord user's avatar (256px), or their default avatar if they have
+// none. Loaded as a plain <img> from Discord's own CDN (allowed by the Activity CSP).
+export function discordAvatarUrl(info) {
+  const u = info?.user;
+  if (!u || !u.id) return null;
+  if (u.avatar) return `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=256`;
+  // New default-avatar scheme: (user_id >> 22) % 6. Dividing by 2^22 (=4194304) drops the
+  // low timestamp bits, leaving a value well within Number's safe range, so no BigInt needed.
+  let idx = 0;
+  try { idx = Math.floor(Number(u.id) / 4194304) % 6; } catch { idx = 0; }
+  return `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
+}

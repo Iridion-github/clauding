@@ -70,7 +70,7 @@ export function useFlippingHusks() {
       setConnected(true);
       // (Re)join automatically so a reconnecting player resyncs to live state.
       const j = joinInfoRef.current;
-      if (j) socket.emit('fh_join', { roomId: j.roomId, playerName: j.name, playerId: clientId, asSpectator: !!j.asSpectator });
+      if (j) socket.emit('fh_join', { roomId: j.roomId, playerName: j.name, playerId: clientId, asSpectator: !!j.asSpectator, avatar: j.avatar });
     });
     socket.on('disconnect', () => setConnected(false));
 
@@ -203,9 +203,9 @@ export function useFlippingHusks() {
     };
   }, []);
 
-  const joinRoom = useCallback((roomId, name, asSpectator = false) => {
-    joinInfoRef.current = { roomId, name, asSpectator }; // remembered so reconnects auto-rejoin in the same role
-    socketRef.current?.emit('fh_join', { roomId, playerName: name, playerId: clientIdRef.current, asSpectator });
+  const joinRoom = useCallback((roomId, name, asSpectator = false, avatar = null) => {
+    joinInfoRef.current = { roomId, name, asSpectator, avatar }; // remembered so reconnects auto-rejoin in the same role
+    socketRef.current?.emit('fh_join', { roomId, playerName: name, playerId: clientIdRef.current, asSpectator, avatar });
   }, []);
 
   const startGame = useCallback((roomId, soundboardEnabled) =>
@@ -272,6 +272,12 @@ export function useFlippingHusks() {
   // Soundboard cheat: ask the server to grant SP (the hidden "+" button).
   const cheatAddSp = useCallback(() => socketRef.current?.emit('fh_cheat_sp'), []);
 
+  // Debug tools (solo only): ask the server to force a card draw / win.
+  const sendDebug = useCallback((kind) => socketRef.current?.emit('fh_debug', { kind }), []);
+  // Queue purely-local animations (the Bust / Flip 7 previews) onto the same animQueue
+  // the real game uses, so they play through the existing CardDrawAnimation pipeline.
+  const enqueueAnims = useCallback((entries) => setAnimQueue(q => [...q, ...entries]), []);
+
   const advanceAnim   = useCallback(() => setAnimQueue(q => q.slice(1)), []);
   const votePlayAgain   = useCallback(() => socketRef.current?.emit('fh_play_again'), []);
   const voteNextRound   = useCallback(() => socketRef.current?.emit('fh_next_round_vote'), []);
@@ -311,6 +317,7 @@ export function useFlippingHusks() {
     leaveGameVotes, voteLeaveGame, withdrawLeaveGame,
     joinRoom, startGame, sendAction, leaveRoom,
     playSound, stopSound, soundPlaying, iStartedSound, cheatAddSp,
+    sendDebug, enqueueAnims,
   };
 }
 
@@ -365,6 +372,8 @@ function buildAnimQueue(prevState, newState) {
         // bust / FH only fire on the last card, and not if SC saved the player
         isBust:          i === added.length - 1 && nowBusted && !newState.secondChanceEvent,
         isFlippingHusks: i === added.length - 1 && nowFH,
+        // Whose hand this card lands in — drives the "fly into hand" handoff.
+        targetPlayerId:  pid,
       });
     }
     break; // one player gains cards per action

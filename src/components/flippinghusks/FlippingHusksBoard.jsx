@@ -4,7 +4,7 @@ import { FlippingHusksCard } from './FlippingHusksCard';
 import './FlippingHusksBoard.css';
 
 const STATUS_COLOR = { active: 'default', stayed: 'success', busted: 'error', flippinghusks: 'primary' };
-const STATUS_LABEL = { active: 'Playing', stayed: 'Stayed', busted: 'Bust!', flippinghusks: 'Flipping Husks!' };
+const STATUS_LABEL = { active: 'Playing', stayed: 'Stayed', busted: 'Bust!', flippinghusks: 'Flipped 7!' };
 
 // Live round score / unique count for a player (mirrors the server's scoring rules).
 function calcDisplay(player) {
@@ -24,7 +24,7 @@ function truncateName(name, max = 16) {
   return name.length > max ? name.slice(0, max - 1) + '…' : name;
 }
 
-export function FlippingHusksBoard({ gameState, playerId, connected = true, roomPlayers = [], spectators = [], isSpectator = false, isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain, nextRoundVotes, voteNextRound, nextRoundDeadline, leaveGameVotes = { votes: [], players: [] }, voteLeaveGame, withdrawLeaveGame, onLeaveGame, animating }) {
+export function FlippingHusksBoard({ gameState, playerId, connected = true, roomPlayers = [], spectators = [], isSpectator = false, isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain, nextRoundVotes, voteNextRound, nextRoundDeadline, leaveGameVotes = { votes: [], players: [] }, voteLeaveGame, withdrawLeaveGame, onLeaveGame, animating, incomingCardId = null }) {
   const { players, playerOrder, activePlayerId, phase, round, drawPile, discardCount, log, winner, pendingAction } = gameState;
   const offlineIds = new Set(roomPlayers.filter(p => p.connected === false).map(p => p.id));
   const self = players[playerId];
@@ -114,9 +114,13 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
                       {p.totalScore} pts
                     </Typography>
                   </Stack>
-                  <div className="fhopponent-cards">
+                  <div className="fhopponent-cards" data-fh-hand={pid}>
                     {p.cards.map(card => (
-                      <div className="fhmini-card" key={card.id}>
+                      <div
+                        className={`fhmini-card${card.id === incomingCardId ? ' fhcard-incoming' : ''}`}
+                        key={card.id}
+                        data-fh-card={card.id}
+                      >
                         <FlippingHusksCard card={card} small />
                       </div>
                     ))}
@@ -155,9 +159,13 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
                 })()}
               </Typography>
             </div>
-            <div className="fhboard-me-cards">
+            <div className="fhboard-me-cards" data-fh-hand={playerId}>
               {self?.cards.map(card => (
-                <div className="fhme-card" key={card.id}>
+                <div
+                  className={`fhme-card${card.id === incomingCardId ? ' fhcard-incoming' : ''}`}
+                  key={card.id}
+                  data-fh-card={card.id}
+                >
                   <FlippingHusksCard card={card} />
                 </div>
               ))}

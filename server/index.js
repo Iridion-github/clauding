@@ -5,7 +5,7 @@ const { Server } = require('socket.io');
 const fs   = require('fs');
 const path = require('path');
 const { createGame: createFlippingHusksGame, resetGame: resetFlippingHusksGame } = require('./flippinghusks/GameState');
-const { applyAction: applyFlippingHusksAction } = require('./flippinghusks/GameEngine');
+const { applyAction: applyFlippingHusksAction, applyDebug: applyFlippingHusksDebug } = require('./flippinghusks/GameEngine');
 
 const app = express();
 app.use(express.json());
@@ -135,7 +135,7 @@ function advanceToNextRound(roomId) {
 const ROOM_CLEANUP_MS = 5 * 60 * 1000;
 
 function roster(room) {
-  return room.players.map(p => ({ id: p.id, name: p.name, connected: p.connected !== false }));
+  return room.players.map(p => ({ id: p.id, name: p.name, connected: p.connected !== false, avatar: p.avatar ?? null }));
 }
 function spectatorRoster(room) {
   return (room.spectators || []).map(p => ({ id: p.id, name: p.name, connected: p.connected !== false }));
@@ -211,7 +211,7 @@ function maybeCloseRoomOnLeave(roomId) {
 fh.on('connection', (socket) => {
   console.log('[FlippingHusks] Connected:', socket.id);
 
-  socket.on('fh_join', ({ roomId, playerName, playerId, asSpectator }) => {
+  socket.on('fh_join', ({ roomId, playerName, playerId, asSpectator, avatar }) => {
     const stableId = playerId || socket.id; // stable client identity (falls back for old clients)
     let room = fhRooms[roomId];
 
@@ -221,6 +221,7 @@ fh.on('connection', (socket) => {
       existing.socketId  = socket.id;
       existing.connected = true;
       if (playerName) existing.name = playerName;
+      if (avatar) existing.avatar = avatar;
       fhSocketToRoom[socket.id] = { roomId, playerId: stableId };
       socket.join(roomId);
       cancelRoomCleanup(room);
@@ -309,7 +310,7 @@ fh.on('connection', (socket) => {
     // can't be dealt into an in-progress game (spectating is the only way in now).
     if (room.state) { socket.emit('fh_error', { message: 'Game already started.' }); return; }
 
-    room.players.push({ socketId: socket.id, id: stableId, name: playerName, connected: true });
+    room.players.push({ socketId: socket.id, id: stableId, name: playerName, connected: true, avatar: avatar ?? null });
     fhSocketToRoom[socket.id] = { roomId, playerId: stableId };
     socket.join(roomId);
     cancelRoomCleanup(room);
@@ -488,6 +489,27 @@ fh.on('connection', (socket) => {
     if (!player) return;
     player.sp += CHEAT_SP_BONUS;
     fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
+  });
+
+  // Debug tools — only ever offered to a solo player (the client shows the panel only
+  // in a one-player game; we re-check here). Forces a specific card draw or a win so
+  // the player can preview cards/animations and the end screen on demand.
+  socket.on('fh_debug', ({ kind } = {}, ack) => {
+    const meta = fhSocketToRoom[socket.id];
+    if (!meta || meta.spectator) { ack?.({ ok: false, error: 'Not in a room.' }); return; }
+    const room = fhRooms[meta.roomId];
+    if (!room?.state) { ack?.({ ok: false, error: 'Game not started.' }); return; }
+    if (room.state.playerOrder.length !== 1) { ack?.({ ok: false, error: 'Debug tools are solo-only.' }); return; }
+
+    const result = applyFlippingHusksDebug(room.state, meta.playerId, kind);
+    if (!result.ok) { ack?.({ ok: false, error: result.error }); return; }
+
+    room.state = result.state;
+    fh.to(meta.roomId).emit('fh_state_update', { state: fhClientState(room.state) });
+
+    // Freezing yourself in solo ends the round → kick off the shared advance countdown.
+    if (room.state.phase === 'round_end' && !room.nextRoundTimer) scheduleNextRound(meta.roomId);
+    ack?.({ ok: true });
   });
 
   // Leave the room from the lobby ("Back") OR from a FINISHED game's end screen

@@ -1,7 +1,7 @@
 /* Self-hosted fonts (same-origin) so they load inside the Discord Activity sandbox,
    where cross-origin requests to fonts.googleapis.com / fonts.gstatic.com are
    blocked by Discord's Content Security Policy. Latin subset only — every glyph
-   these fonts render here (0-12, "FLIPPING HUSKS", "FREEZE", etc.) is ASCII.
+   these fonts render here (0-12, "FLIPPED 7", "FREEZE", etc.) is ASCII.
    Cinzel ships as a variable font, so one file covers weights 400-700. */
 @font-face {
   font-family: 'Bangers';

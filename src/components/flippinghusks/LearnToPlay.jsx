@@ -116,12 +116,12 @@ const STEPS = [
     ),
   },
   {
-    title: 'Flipping Husks!',
+    title: 'Flipped 7!',
     render: () => (
       <Stack spacing={2} sx={{ alignItems: 'center' }}>
         <H>Collect 7 different numbers</H>
         <CardRow cards={[num(1), num(4), num(6), num(8), num(9), num(11), num(2)]} />
-        <Chip label="FLIPPING HUSKS. +15 bonus!" sx={{ bgcolor: 'rgba(240,192,64,0.2)', color: '#f0c040', fontWeight: 'bold' }} />
+        <Chip label="FLIPPED 7. +15 bonus!" sx={{ bgcolor: 'rgba(240,192,64,0.2)', color: '#f0c040', fontWeight: 'bold' }} />
         <P>
           Get <b>7 unique number cards</b> in one round and you score a
           <b style={{ color: '#f0c040' }}> +15 bonus</b>. The round then ends

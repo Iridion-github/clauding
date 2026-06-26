@@ -279,7 +279,8 @@ export function useFlippingHusks() {
   const enqueueAnims = useCallback((entries) => setAnimQueue(q => [...q, ...entries]), []);
 
   const advanceAnim   = useCallback(() => setAnimQueue(q => q.slice(1)), []);
-  const votePlayAgain   = useCallback(() => socketRef.current?.emit('fh_play_again'), []);
+  const votePlayAgain     = useCallback(() => socketRef.current?.emit('fh_play_again', { replay: true }), []);
+  const withdrawPlayAgain = useCallback(() => socketRef.current?.emit('fh_play_again', { replay: false }), []);
   const voteNextRound   = useCallback(() => socketRef.current?.emit('fh_next_round_vote'), []);
   const voteLeaveGame     = useCallback(() => socketRef.current?.emit('fh_leave_vote', { leaving: true }), []);
   const withdrawLeaveGame = useCallback(() => socketRef.current?.emit('fh_leave_vote', { leaving: false }), []);
@@ -312,7 +313,7 @@ export function useFlippingHusks() {
     isMyTurn, self,
     error, actionError,
     animQueue, advanceAnim,
-    playAgainVotes, votePlayAgain,
+    playAgainVotes, votePlayAgain, withdrawPlayAgain,
     nextRoundVotes, voteNextRound, nextRoundDeadline,
     leaveGameVotes, voteLeaveGame, withdrawLeaveGame,
     joinRoom, startGame, sendAction, leaveRoom,

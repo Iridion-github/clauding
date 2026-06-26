@@ -58,7 +58,7 @@ function FlippingHusksAppInner() {
     isMyTurn,
     error, actionError,
     animQueue, advanceAnim,
-    playAgainVotes, votePlayAgain,
+    playAgainVotes, votePlayAgain, withdrawPlayAgain,
     nextRoundVotes, voteNextRound, nextRoundDeadline,
     leaveGameVotes, voteLeaveGame, withdrawLeaveGame,
     joinRoom, startGame, sendAction, leaveRoom,
@@ -252,6 +252,7 @@ function FlippingHusksAppInner() {
           sendAction={sendAction}
           playAgainVotes={playAgainVotes}
           votePlayAgain={votePlayAgain}
+          withdrawPlayAgain={withdrawPlayAgain}
           nextRoundVotes={nextRoundVotes}
           voteNextRound={voteNextRound}
           nextRoundDeadline={nextRoundDeadline}

@@ -402,13 +402,15 @@ fh.on('connection', (socket) => {
     }
   });
 
-  socket.on('fh_play_again', () => {
+  // `replay` false withdraws a previously-cast vote (the player closed the modal).
+  socket.on('fh_play_again', ({ replay = true } = {}) => {
     const meta = fhSocketToRoom[socket.id];
     if (!meta || meta.spectator) return;
     const room = fhRooms[meta.roomId];
     if (!room?.state || room.state.phase !== 'finished') return;
 
-    room.playAgainVotes.add(meta.playerId);
+    if (replay) room.playAgainVotes.add(meta.playerId);
+    else room.playAgainVotes.delete(meta.playerId);
 
     fh.to(meta.roomId).emit('fh_play_again_update', {
       votes: [...room.playAgainVotes],

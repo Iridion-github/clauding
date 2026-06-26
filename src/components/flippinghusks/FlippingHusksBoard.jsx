@@ -25,7 +25,7 @@ function truncateName(name, max = 16) {
   return name.length > max ? name.slice(0, max - 1) + '…' : name;
 }
 
-export function FlippingHusksBoard({ gameState, playerId, connected = true, roomPlayers = [], spectators = [], isSpectator = false, isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain, nextRoundVotes, voteNextRound, nextRoundDeadline, leaveGameVotes = { votes: [], players: [] }, voteLeaveGame, withdrawLeaveGame, onLeaveGame, animating, incomingCardId = null }) {
+export function FlippingHusksBoard({ gameState, playerId, connected = true, roomPlayers = [], spectators = [], isSpectator = false, isMyTurn, actionError, sendAction, playAgainVotes, votePlayAgain, withdrawPlayAgain, nextRoundVotes, voteNextRound, nextRoundDeadline, leaveGameVotes = { votes: [], players: [] }, voteLeaveGame, withdrawLeaveGame, onLeaveGame, animating, incomingCardId = null }) {
   const { players, playerOrder, activePlayerId, phase, round, drawPile, discardCount, log, winner, pendingAction } = gameState;
   const offlineIds = new Set(roomPlayers.filter(p => p.connected === false).map(p => p.id));
   const self = players[playerId];
@@ -250,6 +250,7 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
         <PlayAgainModal
           votes={playAgainVotes.votes}
           players={playerOrder.map(pid => ({ id: pid, name: players[pid].name }))}
+          onClose={withdrawPlayAgain}
         />
       )}
 
@@ -439,10 +440,13 @@ const PICKER_THEME = {
 };
 
 // ── Play Again modal ──────────────────────────────────────────────────────────
-function PlayAgainModal({ votes, players }) {
+// Closable: closing withdraws this player's play-again vote so they can leave the
+// end screen without waiting on everyone else (mirrors the Leave Game modal).
+function PlayAgainModal({ votes, players, onClose }) {
   return (
-    <div className="fhplay-again-overlay">
-      <div className="fhplay-again-modal">
+    <div className="fhplay-again-overlay" onClick={onClose}>
+      <div className="fhplay-again-modal fhleave-modal" onClick={e => e.stopPropagation()}>
+        <button className="fhleave-close" onClick={onClose} aria-label="Close">×</button>
         <Typography variant="h6" sx={{ textAlign: 'center', mb: 2, fontWeight: 'bold' }}>
           ↺ Play Again?
         </Typography>

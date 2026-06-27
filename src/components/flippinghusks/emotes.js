@@ -24,6 +24,10 @@ export const SOUND_COST = 10;
 // Hard cap on how long any clip may play — longer clips are cut off at this mark.
 export const SOUNDBOARD_MAX_MS = 8000;
 
+// Playback volume for soundboard clips (0–1). Held below full so soundboard emotes
+// don't drown out the game's own sound effects / music.
+export const SOUNDBOARD_VOLUME = 0.75;
+
 let player = null;      // the shared HTMLAudioElement
 let playerCap = null;   // the current clip's max-duration timer
 let playerGen = 0;      // bumped on every play/stop; guards stale 'ended'/cap callbacks
@@ -60,6 +64,7 @@ export function playSoundUrl(url, onEnded) {
 
   try { audio.pause(); } catch {}
   audio.src = url;
+  audio.volume = SOUNDBOARD_VOLUME;
   try { audio.currentTime = 0; } catch {}
 
   // Force-stop at the max duration so no clip can run longer than the cap, then end

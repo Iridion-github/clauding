@@ -62,7 +62,7 @@ export function FlippingHusksBoard({ gameState, playerId, connected = true, room
               <Chip label={`Round ${round}`} size="small" variant="outlined" />
               <Chip label={`Deck ${drawPile.length} · ${discardCount ?? 0} used`} size="small" variant="outlined" />
               {phase === 'round_end' && <Chip label="Round over" color="warning" size="small" />}
-              {phase === 'finished'  && <Chip label={`${players[winner].name} wins!`} color="primary" />}
+              {phase === 'finished'  && <Chip label={`${players[winner]?.name ?? 'Winner'} wins!`} color="primary" />}
               {isSpectator && <Chip label="👁 Spectating" size="small" color="info" />}
               {!isSpectator && spectators.length > 0 && (
                 <Chip label={`👁 ${spectators.length} watching`} size="small" variant="outlined" />

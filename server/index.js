@@ -563,6 +563,9 @@ fh.on('connection', (socket) => {
       delete room.state.players[meta.playerId];
       room.state.playerOrder = room.state.playerOrder.filter(id => id !== meta.playerId);
       if (room.state.seats) room.state.seats = room.state.seats.filter(id => id !== meta.playerId);
+      // The winner just left: clear the dangling reference so resynced clients don't
+      // point `winner` at a player that no longer exists in `state.players`.
+      if (room.state.winner === meta.playerId) room.state.winner = null;
     }
 
     delete fhSocketToRoom[socket.id];

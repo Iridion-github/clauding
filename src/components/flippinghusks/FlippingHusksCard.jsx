@@ -12,7 +12,7 @@ const RAINBOW_STOPS = ['#ff3333','#ff9900','#ffee00','#33cc33','#3399ff','#cc33f
 const CF_NUMBER_IMG = {
   0: 'Bagpipes.webp',       1: 'Potion.webp',         2: 'Mimic.webp',
   3: 'Beholder.webp',       4: 'DisplacerBeast.webp', 5: 'Dragon.webp',
-  6: 'Evol.webp',           7: 'Leyah.webp',          8: 'Frederick.webp',
+  6: 'Evol.webp',           7: 'Leyah.webp',          8: 'Lenora.webp',
   9: 'Vikas.webp',          10: 'Morzan.webp',        11: 'Ecate.webp',
   12: 'Ashari.webp',
 };

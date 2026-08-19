@@ -24,14 +24,46 @@ export const SOUND_COST = 10;
 // Hard cap on how long any clip may play — longer clips are cut off at this mark.
 export const SOUNDBOARD_MAX_MS = 8000;
 
-// Playback volume for soundboard clips (0–1). Held below full so soundboard emotes
-// don't drown out the game's own sound effects / music.
+// Default playback volume for soundboard clips (0–1). Held below full so soundboard
+// emotes don't drown out the game's own sound effects / music. Each player can move
+// their own level off this default with the Soundboard's volume slider.
 export const SOUNDBOARD_VOLUME = 0.75;
 
 let player = null;      // the shared HTMLAudioElement
 let playerCap = null;   // the current clip's max-duration timer
 let playerGen = 0;      // bumped on every play/stop; guards stale 'ended'/cap callbacks
 let onClipEnded = null; // callback for the CURRENT clip (e.g. release the room lock)
+
+// ── Per-player volume ─────────────────────────────────────────────────────────────
+// The volume slider in the Soundboard panel is a LOCAL setting: it only changes how
+// loud soundboard clips are for this player (clips everyone hears are still the same
+// ones). Persisted on its own key so it survives reloads and can't be clobbered by
+// the Settings modal saving its whole settings object.
+const VOLUME_KEY = 'fh_soundboardVolume';
+
+function clampVolume(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return SOUNDBOARD_VOLUME;
+  return Math.min(1, Math.max(0, n));
+}
+
+let volume = (() => {
+  try {
+    const raw = localStorage.getItem(VOLUME_KEY);
+    return raw === null ? SOUNDBOARD_VOLUME : clampVolume(raw);
+  } catch { return SOUNDBOARD_VOLUME; }
+})();
+
+export function getSoundboardVolume() { return volume; }
+
+// Save the player's level and apply it straight away, so dragging the slider while a
+// clip is playing changes that clip's loudness live.
+export function setSoundboardVolume(v) {
+  volume = clampVolume(v);
+  try { localStorage.setItem(VOLUME_KEY, String(volume)); } catch {}
+  if (player) { try { player.volume = volume; } catch {} }
+  return volume;
+}
 
 function ensurePlayer() {
   if (player) return player;
@@ -64,7 +96,7 @@ export function playSoundUrl(url, onEnded) {
 
   try { audio.pause(); } catch {}
   audio.src = url;
-  audio.volume = SOUNDBOARD_VOLUME;
+  audio.volume = volume;
   try { audio.currentTime = 0; } catch {}
 
   // Force-stop at the max duration so no clip can run longer than the cap, then end

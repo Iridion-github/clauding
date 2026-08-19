@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Box, Button, Fab, Slide, Typography } from '@mui/material';
+import { Box, Button, Fab, Slide, Slider, Typography } from '@mui/material';
 import StopIcon from '@mui/icons-material/Stop';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import AddIcon from '@mui/icons-material/Add';
-import { EMOTES, SOUND_COST } from './emotes';
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+import VolumeOffIcon from '@mui/icons-material/VolumeOff';
+import { EMOTES, SOUND_COST, getSoundboardVolume, setSoundboardVolume } from './emotes';
 
 // Hidden cheat: pressing the CHEAT_KEY this many times within this window reveals a
 // "+" button in the Soundboard that grants free SP.
@@ -19,6 +21,8 @@ const CHEAT_WINDOW_MS = 3000;
 export function Soundboard({ playSound, stopSound, canStop = false, sp = 0, soundPlaying = false, onCheat, open = false, onToggle, onClose }) {
   const [pending, setPending] = useState(false); // optimistic local lock between click and approval
   const [cheatUnlocked, setCheatUnlocked] = useState(false);
+  // Soundboard clip volume — local to this player, persisted by the emotes module.
+  const [volume, setVolume] = useState(getSoundboardVolume);
   const pendingTimer = useRef(null);
 
   // Once a sound actually starts (or on unmount), drop the optimistic lock.
@@ -140,26 +144,70 @@ export function Soundboard({ playSound, stopSound, canStop = false, sp = 0, soun
               {sp}
             </Typography>
 
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-              {EMOTES.map(({ key, label, icon, color }) => (
+            {/* Emote buttons + the volume slider beside them. The slider stretches to
+                the buttons' height, so it grows with the column (e.g. once the cheat
+                button appears). */}
+            <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                {EMOTES.map(({ key, label, icon, color }) => (
+                      <Fab
+                        key={key}
+                        size="medium"
+                        aria-label={label}
+                        disabled={locked}
+                        onClick={() => trigger(key)}
+                        sx={{
+                          color: '#fff',
+                          fontSize: 24,        // size of the emoji glyph
+                          lineHeight: 1,
+                          // Glossy "button cap": a radial highlight up top fading into the
+                          // button's colour, a crisp rim, an inner sheen + colour glow.
+                          background: `radial-gradient(120% 120% at 30% 22%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.12) 26%, ${color} 60%, ${color} 100%)`,
+                          border: '1px solid rgba(255,255,255,0.35)',
+                          boxShadow: `inset 0 1px 2px rgba(255,255,255,0.55), inset 0 -3px 5px rgba(0,0,0,0.35), 0 3px 8px rgba(0,0,0,0.45), 0 0 10px ${color}66`,
+                          textShadow: '0 1px 2px rgba(0,0,0,0.55)',
+                          transition: 'transform 120ms ease, box-shadow 120ms ease, filter 120ms ease',
+                          // Glassy top sheen overlay (upper half).
+                          '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            inset: 1,
+                            borderRadius: '50%',
+                            background: 'linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 52%)',
+                            pointerEvents: 'none',
+                          },
+                          '&:hover': {
+                            filter: 'brightness(1.12)',
+                            transform: 'translateY(-1px)',
+                            boxShadow: `inset 0 1px 2px rgba(255,255,255,0.6), inset 0 -3px 5px rgba(0,0,0,0.35), 0 5px 12px rgba(0,0,0,0.5), 0 0 16px ${color}99`,
+                          },
+                          '&:active': {
+                            transform: 'translateY(1px)',
+                            boxShadow: `inset 0 2px 5px rgba(0,0,0,0.45), 0 1px 4px rgba(0,0,0,0.4)`,
+                          },
+                          '&.Mui-disabled': {
+                            background: `radial-gradient(120% 120% at 30% 22%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.04) 26%, ${color} 60%)`,
+                            filter: 'grayscale(0.5) brightness(0.7)',
+                            color: 'rgba(255,255,255,0.7)',
+                          },
+                        }}
+                      >
+                        <span aria-hidden="true">{icon}</span>
+                      </Fab>
+                ))}
+
+                {/* Hidden cheat button: appears only once unlocked; grants free SP. */}
+                {cheatUnlocked && (
                     <Fab
-                      key={key}
                       size="medium"
-                      aria-label={label}
-                      disabled={locked}
-                      onClick={() => trigger(key)}
+                      aria-label="Cheat: gain 10 SP"
+                      onClick={() => onCheat?.()}
                       sx={{
                         color: '#fff',
-                        fontSize: 24,        // size of the emoji glyph
-                        lineHeight: 1,
-                        // Glossy "button cap": a radial highlight up top fading into the
-                        // button's colour, a crisp rim, an inner sheen + colour glow.
-                        background: `radial-gradient(120% 120% at 30% 22%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.12) 26%, ${color} 60%, ${color} 100%)`,
+                        background: 'radial-gradient(120% 120% at 30% 22%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.12) 26%, #2e7d32 60%, #2e7d32 100%)',
                         border: '1px solid rgba(255,255,255,0.35)',
-                        boxShadow: `inset 0 1px 2px rgba(255,255,255,0.55), inset 0 -3px 5px rgba(0,0,0,0.35), 0 3px 8px rgba(0,0,0,0.45), 0 0 10px ${color}66`,
-                        textShadow: '0 1px 2px rgba(0,0,0,0.55)',
+                        boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.55), inset 0 -3px 5px rgba(0,0,0,0.35), 0 3px 8px rgba(0,0,0,0.45), 0 0 10px #2e7d3266',
                         transition: 'transform 120ms ease, box-shadow 120ms ease, filter 120ms ease',
-                        // Glassy top sheen overlay (upper half).
                         '&::before': {
                           content: '""',
                           position: 'absolute',
@@ -171,57 +219,49 @@ export function Soundboard({ playSound, stopSound, canStop = false, sp = 0, soun
                         '&:hover': {
                           filter: 'brightness(1.12)',
                           transform: 'translateY(-1px)',
-                          boxShadow: `inset 0 1px 2px rgba(255,255,255,0.6), inset 0 -3px 5px rgba(0,0,0,0.35), 0 5px 12px rgba(0,0,0,0.5), 0 0 16px ${color}99`,
+                          boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.6), inset 0 -3px 5px rgba(0,0,0,0.35), 0 5px 12px rgba(0,0,0,0.5), 0 0 16px #2e7d3299',
                         },
                         '&:active': {
                           transform: 'translateY(1px)',
-                          boxShadow: `inset 0 2px 5px rgba(0,0,0,0.45), 0 1px 4px rgba(0,0,0,0.4)`,
-                        },
-                        '&.Mui-disabled': {
-                          background: `radial-gradient(120% 120% at 30% 22%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.04) 26%, ${color} 60%)`,
-                          filter: 'grayscale(0.5) brightness(0.7)',
-                          color: 'rgba(255,255,255,0.7)',
+                          boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.45), 0 1px 4px rgba(0,0,0,0.4)',
                         },
                       }}
                     >
-                      <span aria-hidden="true">{icon}</span>
+                      <AddIcon />
                     </Fab>
-              ))}
+                )}
+              </Box>
 
-              {/* Hidden cheat button: appears only once unlocked; grants free SP. */}
-              {cheatUnlocked && (
-                  <Fab
-                    size="medium"
-                    aria-label="Cheat: gain 10 SP"
-                    onClick={() => onCheat?.()}
-                    sx={{
-                      color: '#fff',
-                      background: 'radial-gradient(120% 120% at 30% 22%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.12) 26%, #2e7d32 60%, #2e7d32 100%)',
-                      border: '1px solid rgba(255,255,255,0.35)',
-                      boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.55), inset 0 -3px 5px rgba(0,0,0,0.35), 0 3px 8px rgba(0,0,0,0.45), 0 0 10px #2e7d3266',
-                      transition: 'transform 120ms ease, box-shadow 120ms ease, filter 120ms ease',
-                      '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        inset: 1,
-                        borderRadius: '50%',
-                        background: 'linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 52%)',
-                        pointerEvents: 'none',
-                      },
-                      '&:hover': {
-                        filter: 'brightness(1.12)',
-                        transform: 'translateY(-1px)',
-                        boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.6), inset 0 -3px 5px rgba(0,0,0,0.35), 0 5px 12px rgba(0,0,0,0.5), 0 0 16px #2e7d3299',
-                      },
-                      '&:active': {
-                        transform: 'translateY(1px)',
-                        boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.45), 0 1px 4px rgba(0,0,0,0.4)',
-                      },
-                    }}
-                  >
-                    <AddIcon />
-                  </Fab>
-              )}
+              {/* Vertical volume slider: changes how loud soundboard clips are for
+                  THIS player only (0 = muted). Applies live to a clip in flight. */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75, py: 0.5 }}>
+                {volume === 0
+                  ? <VolumeOffIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.55)' }} />
+                  : <VolumeUpIcon sx={{ fontSize: 16, color: 'rgba(255,255,255,0.75)' }} />}
+                <Slider
+                  orientation="vertical"
+                  size="small"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={volume}
+                  onChange={(_, v) => { setVolume(v); setSoundboardVolume(v); }}
+                  aria-label="Soundboard volume"
+                  valueLabelDisplay="off"
+                  sx={{
+                    flex: 1,
+                    color: '#fff',
+                    '& .MuiSlider-rail': { opacity: 0.3, backgroundColor: 'rgba(255,255,255,0.6)' },
+                    '& .MuiSlider-track': { border: 'none' },
+                    '& .MuiSlider-thumb': {
+                      width: 12, height: 12,
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.6)',
+                      '&:hover, &.Mui-focusVisible': { boxShadow: '0 0 0 6px rgba(255,255,255,0.16)' },
+                      '&.Mui-active': { boxShadow: '0 0 0 10px rgba(255,255,255,0.2)' },
+                    },
+                  }}
+                />
+              </Box>
             </Box>
 
             {/* STOP: cuts the current sound short for the whole room. Only the player
